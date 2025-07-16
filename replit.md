@@ -16,7 +16,8 @@ Preferred communication style: Simple, everyday language.
 - Resolved "Create Comic" button authentication issues and login loop
 - Enhanced authentication state management with proper query refetching
 - Comprehensive testing completed: all core systems verified operational
-- Admin account established with full privileges (10,000 credits, lifetime tier)  
+- Admin account established with full privileges (10,000 credits, lifetime tier)
+- Admin credentials updated: username "admin", password "password"  
 - User registration and authentication flows validated
 - Database integrity confirmed with proper credit tracking
 - Comic creation API fully functional with graceful OpenAI fallbacks
