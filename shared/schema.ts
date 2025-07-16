@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   lastCreditReset: timestamp("last_credit_reset").defaultNow().notNull(),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  isAdmin: boolean("is_admin").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
