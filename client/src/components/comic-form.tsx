@@ -119,14 +119,7 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
       return;
     }
 
-    if (characters.length === 0) {
-      toast({
-        title: "Add characters",
-        description: "Please add at least one character to your comic.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Characters are optional - AI can generate interesting stories without predefined characters
 
     setIsGenerating(true);
 
@@ -152,6 +145,7 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
           title: data.title,
           description: data.description,
           artStyle: data.artStyle,
+          targetAudience: data.targetAudience,
           characters: characters,
           panelCount: data.panelCount,
           prompt: data.prompt,
@@ -289,7 +283,7 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
                 <FormLabel>Art Style</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -318,7 +312,7 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Target Audience</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select target audience" />

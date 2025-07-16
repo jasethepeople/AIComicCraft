@@ -190,8 +190,8 @@ export const comicGenerationSchema = z.object({
     name: z.string(),
     description: z.string(),
     voiceType: z.string().optional(), // for anime voice generation
-  })).min(1, "At least one character is required"),
-  panelCount: z.number().min(1).max(50), // increased for anime frames
+  })).optional().default([]),
+  panelCount: z.number().min(1).max(12), // comic panels
   prompt: z.string().min(10, "Detailed prompt is required"),
 });
 
@@ -236,7 +236,7 @@ export const panelGenerationSchema = z.object({
   characters: z.array(z.object({
     name: z.string(),
     description: z.string(),
-  })),
+  })).optional().default([]),
   dialogues: z.array(z.object({
     character: z.string(),
     text: z.string(),

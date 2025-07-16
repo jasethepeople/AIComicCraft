@@ -238,7 +238,7 @@ export default function Onboarding() {
                   <div className="flex items-center space-x-2">
                     <Checkbox 
                       checked={data.interests.includes(interest)}
-                      onChange={() => handleInterestToggle(interest)}
+                      onCheckedChange={() => handleInterestToggle(interest)}
                     />
                     <span className="text-sm font-medium">{interest}</span>
                   </div>
@@ -277,7 +277,7 @@ export default function Onboarding() {
                   <div className="flex items-center space-x-3">
                     <Checkbox 
                       checked={data.goals.includes(goal)}
-                      onChange={() => handleGoalToggle(goal)}
+                      onCheckedChange={() => handleGoalToggle(goal)}
                     />
                     <span className="font-medium">{goal}</span>
                   </div>

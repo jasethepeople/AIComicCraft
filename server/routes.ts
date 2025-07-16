@@ -362,87 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI generation routes
-  app.post("/api/generate/story", authenticate, async (req, res) => {
-    try {
-      const generationRequest = comicGenerationSchema.parse(req.body);
-      
-      // Check and deduct credits (5 credits for story generation)
-      const creditsDeducted = await checkAndDeductCredits(req.session.userId!, 5, "Story generation");
-      if (!creditsDeducted) {
-        return res.status(402).json({ 
-          message: "Insufficient credits", 
-          required: 5,
-          action: "upgrade_or_purchase"
-        });
-      }
-      
-      let storyOutline;
-      try {
-        // Try to generate story outline using OpenAI
-        storyOutline = await openai.generateStoryOutline(generationRequest);
-      } catch (openaiError) {
-        // Fallback when OpenAI is not available
-        console.log("OpenAI API not available, using fallback story generation");
-        storyOutline = {
-          outline: `${generationRequest.title}: ${generationRequest.prompt}. This exciting story unfolds across ${generationRequest.panelCount} action-packed panels.`,
-          scenes: Array.from({ length: generationRequest.panelCount }, (_, i) => ({
-            description: `Panel ${i + 1}: ${generationRequest.prompt} - Scene ${i + 1}`,
-            dialogues: generationRequest.characters.map(char => ({
-              character: char.name,
-              text: `${char.name} takes action in this exciting scene!`
-            }))
-          }))
-        };
-      }
-      
-      // Create a new comic
-      const comic = await storage.createComic({
-        title: generationRequest.title,
-        description: generationRequest.description || storyOutline.outline,
-        userId: req.session.userId!,
-        artStyle: generationRequest.artStyle,
-        coverImage: "",
-        price: "",
-        isPublished: false,
-        isForSale: false,
-      });
-      
-      // Create panels from scenes
-      const panelPromises = storyOutline.scenes.map(async (scene, index) => {
-        return storage.createPanel({
-          comicId: comic.id,
-          sequence: index + 1,
-          imageUrl: "", // Will be generated later
-          characters: generationRequest.characters,
-          dialogues: scene.dialogues || [],
-          layout: "standard", // Default layout
-        });
-      });
-      
-      const panels = await Promise.all(panelPromises);
-      
-      res.status(201).json({
-        comicId: comic.id,
-        title: comic.title,
-        outline: storyOutline.outline,
-        panels: panels.map(panel => ({
-          id: panel.id,
-          sequence: panel.sequence,
-          description: storyOutline.scenes[panel.sequence - 1].description,
-          dialogues: storyOutline.scenes[panel.sequence - 1].dialogues || []
-        }))
-      });
-    } catch (err) {
-      if (err instanceof ZodError) {
-        const validationError = fromZodError(err);
-        return res.status(400).json({ message: validationError.message });
-      }
-      
-      console.error("Error generating story:", err);
-      res.status(500).json({ message: "Failed to generate story" });
-    }
-  });
+  // Remove old route - replaced with the new one below
 
   app.post("/api/generate/panel", authenticate, async (req, res) => {
     try {
@@ -1022,16 +942,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Name and description are required" });
       }
       
-      // For now, provide enhanced description without OpenAI
-      const enhancedDescription = `${description}. This character has distinct personality traits and plays an important role in the story. They have unique visual characteristics that make them memorable and contribute to the overall narrative.`;
-      
-      const characterDetails = {
-        name,
-        fullDescription: enhancedDescription,
-        personality: "Dynamic and engaging character with depth",
-        visualTraits: "Distinctive appearance that fits the comic style",
-        role: "Key character in the story"
-      };
+      // Try OpenAI first, fallback if needed
+      let characterDetails;
+      try {
+        characterDetails = await generateCharacterDetails(name, description);
+      } catch (error) {
+        console.log("OpenAI API not available, using fallback character generation");
+        // Fallback enhanced description
+        const enhancedDescription = `${description}. This character has distinct personality traits and plays an important role in the story. They have unique visual characteristics that make them memorable and contribute to the overall narrative.`;
+        
+        characterDetails = {
+          fullDescription: enhancedDescription,
+          traits: ["brave", "determined", "creative"],
+          background: `${name} comes from an interesting background that shaped their character. Their experiences have made them who they are today, ready for new adventures.`
+        };
+      }
       
       res.json(characterDetails);
     } catch (error: any) {
@@ -1063,6 +988,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Try OpenAI first, fallback if needed
+      let story;
+      try {
+        story = await generateStoryOutline({
+          title,
+          description: description || "",
+          artStyle,
+          characters: characters || [],
+          panelCount: panelCount || 6,
+          prompt
+        });
+      } catch (error) {
+        console.log("OpenAI API not available, using fallback story generation");
+        // Fallback story generation
+        story = {
+          title,
+          outline: `${title}: ${prompt}. This exciting story unfolds across ${panelCount || 6} action-packed panels.`,
+          panels: Array.from({ length: panelCount || 6 }, (_, i) => ({
+            sequence: i + 1,
+            description: `Panel ${i + 1}: ${prompt} - Scene ${i + 1}`,
+            dialogues: characters?.length > 0 ? [{
+              character: characters[0].name,
+              text: `${characters[0].name} takes action in this exciting scene!`
+            }] : []
+          }))
+        };
+      }
+
       // Create comic with panels
       const comic = await storage.createComic({
         title,
@@ -1072,24 +1025,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contentType: "comic"
       });
 
-      // Create basic panels
+      // Create panels based on generated story
       const panels = [];
-      for (let i = 1; i <= Math.min(panelCount || 6, 12); i++) {
+      for (const panelData of story.panels) {
         const panel = await storage.createPanel({
           comicId: comic.id,
-          sequence: i,
+          sequence: panelData.sequence,
           layout: "standard",
           panelType: "static",
           characters: characters || [],
-          dialogues: []
+          dialogues: panelData.dialogues || []
         });
         panels.push(panel);
       }
 
       res.json({ 
         comicId: comic.id,
-        comic,
-        panels,
+        title: story.title,
+        outline: story.outline,
+        panels: story.panels.map((p, i) => ({
+          id: panels[i].id,
+          sequence: p.sequence,
+          description: p.description,
+          dialogues: p.dialogues
+        })),
         creditsUsed: 2
       });
     } catch (error: any) {
