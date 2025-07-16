@@ -6,6 +6,7 @@ import { Comic } from "@shared/schema";
 import ComicEditor from "@/components/editor/comic-editor";
 import ComicForm from "@/components/comic-form";
 import StyleRecommendation from "@/components/style-recommendation";
+import StyleMorphingPreview from "@/components/style-morphing-preview";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -93,8 +94,9 @@ export default function CreatorStudio() {
         ) : (
           // Create new comic
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="recommendations">AI Style Assistant</TabsTrigger>
+              <TabsTrigger value="morphing">Style Preview</TabsTrigger>
               <TabsTrigger value="form">Create Comic</TabsTrigger>
             </TabsList>
 
@@ -108,6 +110,10 @@ export default function CreatorStudio() {
                   });
                 }}
               />
+            </TabsContent>
+
+            <TabsContent value="morphing" className="mt-6">
+              <StyleMorphingPreview />
             </TabsContent>
 
             <TabsContent value="form" className="mt-6">

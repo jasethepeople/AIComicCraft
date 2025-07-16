@@ -81,6 +81,7 @@ export default function Header() {
           <NavLink href="/community">Community</NavLink>
           <NavLink href="/learn">Learn</NavLink>
           <NavLink href="/tutorials">Tutorials</NavLink>
+          <NavLink href="/style-morphing">Style Preview</NavLink>
         </nav>
 
         <div className="flex items-center space-x-4">
@@ -182,6 +183,12 @@ export default function Header() {
             </Link>
             <Link href="/learn">
               <a className="text-white hover:text-secondary transition-colors">Learn</a>
+            </Link>
+            <Link href="/tutorials">
+              <a className="text-white hover:text-secondary transition-colors">Tutorials</a>
+            </Link>
+            <Link href="/style-morphing">
+              <a className="text-white hover:text-secondary transition-colors">Style Preview</a>
             </Link>
             
             <Link href="/creator-studio">

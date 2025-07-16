@@ -28,6 +28,7 @@ import Contact from "@/pages/contact";
 import Support from "@/pages/support";
 import Blog from "@/pages/blog";
 import Tutorials from "@/pages/tutorials";
+import StyleMorphing from "@/pages/style-morphing";
 import Documentation from "@/pages/documentation";
 import Careers from "@/pages/careers";
 import Privacy from "@/pages/privacy";
@@ -106,6 +107,7 @@ function Router() {
       <Route path="/support" component={Support} />
       <Route path="/blog" component={Blog} />
       <Route path="/tutorials" component={Tutorials} />
+      <Route path="/style-morphing" component={StyleMorphing} />
       <Route path="/documentation" component={Documentation} />
       <Route path="/careers" component={Careers} />
       <Route path="/privacy" component={Privacy} />
