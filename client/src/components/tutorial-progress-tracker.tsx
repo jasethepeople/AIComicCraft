@@ -4,6 +4,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Award, Star, BookOpen, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface TutorialProgress {
   completed: string[];
@@ -20,6 +22,15 @@ const achievements = [
 ];
 
 export default function TutorialProgressTracker() {
+  const queryClient = useQueryClient();
+  
+  // Fetch tutorial progress from API
+  const { data: serverProgress = [], isLoading } = useQuery({
+    queryKey: ["/api/tutorials/progress"],
+    staleTime: 60000, // Cache for 1 minute
+  });
+
+  // Local state for UI updates
   const [progress, setProgress] = useState<TutorialProgress>({
     completed: [],
     totalTutorials: 8,
@@ -27,20 +38,44 @@ export default function TutorialProgressTracker() {
     achievementsBadges: []
   });
 
-  // Load progress from localStorage
+  // Mutation to mark tutorial complete
+  const markCompleteMutation = useMutation({
+    mutationFn: async ({ tutorialId, quizScore }: { tutorialId: string; quizScore?: number }) => {
+      return apiRequest("POST", "/api/tutorials/complete", { tutorialId, quizScore });
+    },
+    onSuccess: () => {
+      // Refresh progress data
+      queryClient.invalidateQueries({ queryKey: ["/api/tutorials/progress"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tutorials/achievements"] });
+    },
+  });
+
+  // Update progress when server data changes
   useEffect(() => {
-    const savedProgress = localStorage.getItem('comicai-tutorial-progress');
-    if (savedProgress) {
-      try {
-        const parsed = JSON.parse(savedProgress);
-        setProgress(parsed);
-      } catch (error) {
-        console.error('Error loading tutorial progress:', error);
+    if (serverProgress.length > 0) {
+      const completedIds = serverProgress.map((p: any) => p.tutorialId);
+      const newProgress = {
+        completed: completedIds,
+        totalTutorials: 8,
+        skillLevel: getSkillLevel(completedIds.length),
+        achievementsBadges: [] // This will be handled by the achievement component
+      };
+      setProgress(newProgress);
+    } else {
+      // Fallback to localStorage for offline functionality
+      const savedProgress = localStorage.getItem('comicai-tutorial-progress');
+      if (savedProgress) {
+        try {
+          const parsed = JSON.parse(savedProgress);
+          setProgress(parsed);
+        } catch (error) {
+          console.error('Error loading tutorial progress:', error);
+        }
       }
     }
-  }, []);
+  }, [serverProgress]);
 
-  // Save progress to localStorage
+  // Save progress to localStorage as backup
   const saveProgress = (newProgress: TutorialProgress) => {
     setProgress(newProgress);
     localStorage.setItem('comicai-tutorial-progress', JSON.stringify(newProgress));
@@ -66,20 +101,33 @@ export default function TutorialProgressTracker() {
   };
 
   // Function to be called from tutorials page when a tutorial is completed
-  const markTutorialComplete = (tutorialId: string) => {
-    const newCompleted = [...progress.completed];
-    if (!newCompleted.includes(tutorialId)) {
-      newCompleted.push(tutorialId);
+  const markTutorialComplete = async (tutorialId: string, quizScore?: number) => {
+    if (!progress.completed.includes(tutorialId)) {
+      try {
+        await markCompleteMutation.mutateAsync({ tutorialId, quizScore });
+        
+        // Update local state immediately for UI responsiveness
+        const newCompleted = [...progress.completed, tutorialId];
+        const newProgress = {
+          ...progress,
+          completed: newCompleted,
+          skillLevel: getSkillLevel(newCompleted.length),
+          achievementsBadges: getUnlockedAchievements(newCompleted.length, newCompleted)
+        };
+        saveProgress(newProgress);
+      } catch (error) {
+        console.error('Error marking tutorial complete:', error);
+        // Fallback to local storage only
+        const newCompleted = [...progress.completed, tutorialId];
+        const newProgress = {
+          ...progress,
+          completed: newCompleted,
+          skillLevel: getSkillLevel(newCompleted.length),
+          achievementsBadges: getUnlockedAchievements(newCompleted.length, newCompleted)
+        };
+        saveProgress(newProgress);
+      }
     }
-    
-    const newProgress: TutorialProgress = {
-      ...progress,
-      completed: newCompleted,
-      skillLevel: getSkillLevel(newCompleted.length),
-      achievementsBadges: getUnlockedAchievements(newCompleted.length, newCompleted)
-    };
-    
-    saveProgress(newProgress);
   };
 
   return (

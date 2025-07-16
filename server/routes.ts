@@ -1013,6 +1013,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return await storage.deductCredits(userId, requiredCredits, description, relatedId);
   };
 
+  // Tutorial progress endpoints
+  app.get("/api/tutorials/progress", authenticate, async (req, res) => {
+    try {
+      const progress = await storage.getUserTutorialProgress(req.user!.id);
+      res.json(progress);
+    } catch (error: any) {
+      console.error("Error fetching tutorial progress:", error);
+      res.status(500).json({ message: "Failed to fetch tutorial progress" });
+    }
+  });
+
+  app.post("/api/tutorials/complete", authenticate, async (req, res) => {
+    try {
+      const { tutorialId, quizScore } = req.body;
+      const progress = await storage.markTutorialComplete(req.user!.id, tutorialId, quizScore);
+      
+      // Check for achievements
+      const allProgress = await storage.getUserTutorialProgress(req.user!.id);
+      const completedCount = allProgress.length;
+      
+      // Award achievements based on completion count
+      if (completedCount === 1) {
+        await storage.unlockTutorialAchievement(req.user!.id, "first_tutorial");
+      } else if (completedCount === 3) {
+        await storage.unlockTutorialAchievement(req.user!.id, "intermediate_learner");
+      } else if (completedCount === 6) {
+        await storage.unlockTutorialAchievement(req.user!.id, "advanced_student");
+      } else if (completedCount === 8) {
+        await storage.unlockTutorialAchievement(req.user!.id, "master_artist");
+      }
+      
+      // Award quiz performance achievements
+      if (quizScore === 3) {
+        await storage.unlockTutorialAchievement(req.user!.id, "perfect_score");
+      }
+      
+      res.json(progress);
+    } catch (error: any) {
+      console.error("Error completing tutorial:", error);
+      res.status(500).json({ message: "Failed to complete tutorial" });
+    }
+  });
+
+  app.get("/api/tutorials/achievements", authenticate, async (req, res) => {
+    try {
+      const achievements = await storage.getUserTutorialAchievements(req.user!.id);
+      res.json(achievements);
+    } catch (error: any) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

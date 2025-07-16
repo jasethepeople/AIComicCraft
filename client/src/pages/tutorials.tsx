@@ -10,6 +10,7 @@ import { PlayCircle, BookOpen, Award, CheckCircle, ArrowRight, Palette, Eye, Lig
 import TutorialProgressTracker, { useTutorialProgress } from "@/components/tutorial-progress-tracker";
 import TutorialQuiz from "@/components/tutorial-quiz";
 import TutorialCertificate from "@/components/tutorial-certificate";
+import TutorialAchievementDisplay from "@/components/tutorial-achievement-display";
 
 interface Tutorial {
   id: string;
@@ -315,7 +316,7 @@ export default function Tutorials() {
       setQuizCompleted(true);
       // If quiz score is good, mark tutorial as complete
       if (score >= 2) {
-        markComplete(tutorial.id);
+        markComplete(tutorial.id, score);
         setShowCertificate(true);
       }
     };
@@ -585,7 +586,7 @@ export default function Tutorials() {
                 </Button>
                 <Button
                   onClick={() => {
-                    markComplete(tutorial.id);
+                    markComplete(tutorial.id, undefined);
                     setCurrentStep(0);
                   }}
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700"

@@ -1,5 +1,5 @@
 import { 
-  users, comics, panels, artStyles, creditTransactions, subscriptionPlans, userStylePreferences, styleRecommendationCache, styleTrends,
+  users, comics, panels, artStyles, creditTransactions, subscriptionPlans, userStylePreferences, styleRecommendationCache, styleTrends, tutorialProgress, tutorialAchievements, tutorialStats,
   type User, type InsertUser, 
   type Comic, type InsertComic, 
   type Panel, type InsertPanel, 
@@ -8,7 +8,8 @@ import {
   type SubscriptionPlan, type InsertSubscriptionPlan,
   type UserStylePreference, type InsertUserStylePreference,
   type StyleRecommendationCache, type InsertStyleRecommendationCache,
-  type StyleTrend, type InsertStyleTrend
+  type StyleTrend, type InsertStyleTrend,
+  type TutorialProgress, type TutorialAchievement, type TutorialStats, type InsertTutorialProgress, type InsertTutorialAchievement
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gt, gte, ne } from "drizzle-orm";
@@ -68,6 +69,14 @@ export interface IStorage {
   updateStyleTrends(): Promise<void>;
   getPersonalizedStyleInsights(userId: number): Promise<any>;
   getSimilarUsers(userId: number): Promise<Array<{ userId: number; similarity: number }>>;
+
+  // Tutorial operations
+  getUserTutorialProgress(userId: number): Promise<TutorialProgress[]>;
+  markTutorialComplete(userId: number, tutorialId: string, quizScore?: number): Promise<TutorialProgress>;
+  getUserTutorialAchievements(userId: number): Promise<TutorialAchievement[]>;
+  unlockTutorialAchievement(userId: number, achievementId: string): Promise<TutorialAchievement>;
+  getTutorialStats(tutorialId?: string): Promise<TutorialStats[]>;
+  updateTutorialStats(tutorialId: string, quizScore?: number): Promise<void>;
 }
 
 // In-memory storage implementation
@@ -751,6 +760,87 @@ export class DatabaseStorage implements IStorage {
     if (avgRating >= 4.5) return "Quality Focused";
     if (totalUsage >= 10) return "Prolific Creator";
     return "Rising Artist";
+  }
+  // Tutorial methods
+  async getUserTutorialProgress(userId: number): Promise<TutorialProgress[]> {
+    return await db.select().from(tutorialProgress).where(eq(tutorialProgress.userId, userId));
+  }
+
+  async markTutorialComplete(userId: number, tutorialId: string, quizScore?: number): Promise<TutorialProgress> {
+    const [progress] = await db
+      .insert(tutorialProgress)
+      .values({
+        userId,
+        tutorialId,
+        quizScore,
+        certificateGenerated: (quizScore && quizScore >= 2) || false,
+      })
+      .returning();
+
+    // Update tutorial stats
+    await this.updateTutorialStats(tutorialId, quizScore);
+
+    return progress;
+  }
+
+  async getUserTutorialAchievements(userId: number): Promise<TutorialAchievement[]> {
+    return await db.select().from(tutorialAchievements).where(eq(tutorialAchievements.userId, userId));
+  }
+
+  async unlockTutorialAchievement(userId: number, achievementId: string): Promise<TutorialAchievement> {
+    const [achievement] = await db
+      .insert(tutorialAchievements)
+      .values({
+        userId,
+        achievementId,
+      })
+      .returning();
+
+    return achievement;
+  }
+
+  async getTutorialStats(tutorialId?: string): Promise<TutorialStats[]> {
+    if (tutorialId) {
+      return await db.select().from(tutorialStats).where(eq(tutorialStats.tutorialId, tutorialId));
+    }
+    return await db.select().from(tutorialStats);
+  }
+
+  async updateTutorialStats(tutorialId: string, quizScore?: number): Promise<void> {
+    // Get existing stats
+    const [existingStats] = await db.select().from(tutorialStats).where(eq(tutorialStats.tutorialId, tutorialId));
+
+    if (existingStats) {
+      // Update existing stats
+      const newCompletions = existingStats.totalCompletions + 1;
+      let newAverageScore = existingStats.averageQuizScore;
+
+      if (quizScore !== undefined) {
+        const currentTotal = existingStats.averageQuizScore 
+          ? parseFloat(existingStats.averageQuizScore) * (newCompletions - 1)
+          : 0;
+        newAverageScore = ((currentTotal + quizScore) / newCompletions).toString();
+      }
+
+      await db
+        .update(tutorialStats)
+        .set({
+          totalCompletions: newCompletions,
+          averageQuizScore: newAverageScore,
+          updatedAt: new Date(),
+        })
+        .where(eq(tutorialStats.tutorialId, tutorialId));
+    } else {
+      // Create new stats
+      await db
+        .insert(tutorialStats)
+        .values({
+          tutorialId,
+          totalCompletions: 1,
+          averageQuizScore: quizScore?.toString(),
+          popularityScore: "1.0",
+        });
+    }
   }
 }
 

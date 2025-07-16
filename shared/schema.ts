@@ -394,6 +394,65 @@ export const styleRecommendationCacheRelations = relations(styleRecommendationCa
   }),
 }));
 
+// Tutorial Progress Tables
+export const tutorialProgress = pgTable("tutorial_progress", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  tutorialId: text("tutorial_id").notNull(),
+  completedAt: timestamp("completed_at").notNull().defaultNow(),
+  quizScore: integer("quiz_score"),
+  certificateGenerated: boolean("certificate_generated").notNull().default(false),
+});
+
+export const tutorialAchievements = pgTable("tutorial_achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  achievementId: text("achievement_id").notNull(),
+  unlockedAt: timestamp("unlocked_at").notNull().defaultNow(),
+});
+
+export const tutorialStats = pgTable("tutorial_stats", {
+  id: serial("id").primaryKey(),
+  tutorialId: text("tutorial_id").notNull().unique(),
+  totalCompletions: integer("total_completions").notNull().default(0),
+  averageQuizScore: decimal("average_quiz_score", { precision: 4, scale: 2 }),
+  popularityScore: decimal("popularity_score", { precision: 10, scale: 2 }).notNull().default("0"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertTutorialProgressSchema = createInsertSchema(tutorialProgress).pick({
+  userId: true,
+  tutorialId: true,
+  quizScore: true,
+  certificateGenerated: true,
+});
+
+export const insertTutorialAchievementSchema = createInsertSchema(tutorialAchievements).pick({
+  userId: true,
+  achievementId: true,
+});
+
+export type TutorialProgress = typeof tutorialProgress.$inferSelect;
+export type InsertTutorialProgress = z.infer<typeof insertTutorialProgressSchema>;
+export type TutorialAchievement = typeof tutorialAchievements.$inferSelect;
+export type InsertTutorialAchievement = z.infer<typeof insertTutorialAchievementSchema>;
+export type TutorialStats = typeof tutorialStats.$inferSelect;
+
+// Tutorial relations
+export const tutorialProgressRelations = relations(tutorialProgress, ({ one }) => ({
+  user: one(users, {
+    fields: [tutorialProgress.userId],
+    references: [users.id],
+  }),
+}));
+
+export const tutorialAchievementsRelations = relations(tutorialAchievements, ({ one }) => ({
+  user: one(users, {
+    fields: [tutorialAchievements.userId],
+    references: [users.id],
+  }),
+}));
+
 export const styleTrendsRelations = relations(styleTrends, ({ one }) => ({
   artStyle: one(artStyles, {
     fields: [styleTrends.artStyleId],
