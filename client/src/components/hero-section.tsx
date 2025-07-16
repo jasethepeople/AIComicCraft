@@ -15,12 +15,12 @@ export default function HeroSection() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/creator-studio">
-                <Button className="bg-accent hover:bg-opacity-90 text-white font-bold px-6 py-3 rounded-lg text-lg shadow-lg w-full sm:w-auto">
+                <Button className="bg-accent hover:bg-opacity-90 text-white font-bold px-6 py-3 rounded-lg text-lg shadow-lg w-full sm:w-auto hover-bounce hover:shadow-[0_10px_30px_rgba(0,200,83,0.4)] transition-all duration-300">
                   Create Your First Comic
                 </Button>
               </Link>
               <Link href="/marketplace">
-                <Button variant="outline" className="border-2 border-white hover:bg-white hover:text-primary font-bold px-6 py-3 rounded-lg text-lg w-full sm:w-auto">
+                <Button variant="outline" className="border-2 border-white hover:bg-white hover:text-primary font-bold px-6 py-3 rounded-lg text-lg w-full sm:w-auto hover:scale-105 transition-all duration-300">
                   Explore Marketplace
                 </Button>
               </Link>
@@ -59,7 +59,7 @@ export default function HeroSection() {
               <img 
                 src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600" 
                 alt="Comic book creation example" 
-                className="rounded-xl shadow-2xl transform -rotate-2 mx-auto relative z-10"
+                className="rounded-xl shadow-2xl transform -rotate-2 mx-auto relative z-10 hover:rotate-0 hover:scale-105 transition-all duration-500 ease-out float-animation"
               />
             </div>
           </div>

@@ -50,8 +50,11 @@ export default function Header() {
     
     return (
       <Link href={href}>
-        <span className={`text-white hover:text-secondary transition-colors cursor-pointer ${isActive ? 'text-secondary' : ''}`}>
+        <span className={`text-white hover:text-secondary transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-0.5 relative ${isActive ? 'text-secondary' : ''}`}>
           {children}
+          {isActive && (
+            <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-secondary rounded-full" />
+          )}
         </span>
       </Link>
     );

@@ -82,8 +82,8 @@ export default function PricingSection() {
             <div 
               key={index} 
               className={`
-                ${plan.popular ? "bg-primary bg-opacity-5 border-2 border-primary transform scale-105 shadow-xl" : "bg-light border border-gray-200"}
-                rounded-xl overflow-hidden relative
+                ${plan.popular ? "bg-primary bg-opacity-5 border-2 border-primary transform scale-105 shadow-xl hover:scale-110 hover:shadow-2xl" : "bg-light border border-gray-200 hover:border-primary/50 hover:shadow-lg hover:-translate-y-1"}
+                rounded-xl overflow-hidden relative transition-all duration-500 ease-out group
               `}
             >
               {plan.popular && (
@@ -92,7 +92,7 @@ export default function PricingSection() {
                 </div>
               )}
               <div className="p-6">
-                <h3 className="font-bold text-xl mb-2">{plan.name}</h3>
+                <h3 className="font-bold text-xl mb-2 group-hover:text-primary transition-colors duration-300">{plan.name}</h3>
                 <p className="text-gray-600 mb-4">{plan.description}</p>
                 <div className="mb-6">
                   <span className="text-4xl font-bold">${plan.price}</span>
@@ -108,7 +108,7 @@ export default function PricingSection() {
                 </ul>
                 <Link href={plan.buttonLink}>
                   <Button 
-                    className={`w-full ${plan.popular ? "bg-primary hover:bg-opacity-90" : "bg-dark hover:bg-opacity-80"} text-white font-bold py-3 rounded-lg`}
+                    className={`w-full ${plan.popular ? "bg-primary hover:bg-opacity-90 hover:scale-105" : "bg-dark hover:bg-opacity-80 hover:scale-105"} text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg`}
                   >
                     {plan.buttonText}
                   </Button>

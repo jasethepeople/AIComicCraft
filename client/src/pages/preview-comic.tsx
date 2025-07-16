@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { Comic, Panel } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import TextToSpeech from "@/components/text-to-speech";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,6 +12,7 @@ import {
   Edit,
   ShoppingCart,
   Share2,
+  Volume2,
 } from "lucide-react";
 
 export default function PreviewComic() {
@@ -158,10 +160,10 @@ export default function PreviewComic() {
           {panels.map((panel, index) => (
             <button
               key={panel.id}
-              className={`flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border-2 transition-all ${
+              className={`flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg ${
                 index === currentPage
                   ? "border-primary shadow-md"
-                  : "border-transparent"
+                  : "border-transparent hover:border-primary/50"
               }`}
               onClick={() => setCurrentPage(index)}
             >
@@ -169,16 +171,80 @@ export default function PreviewComic() {
                 <img
                   src={panel.imageUrl}
                   alt={`Thumbnail ${index + 1}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
                 />
               ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors duration-300">
                   <span className="text-xs text-gray-500">{index + 1}</span>
                 </div>
               )}
             </button>
           ))}
         </div>
+
+        {/* Text-to-Speech for Comic Reading */}
+        {currentPanel && (
+          <div className="mt-6 space-y-4">
+            {/* Panel description TTS */}
+            {currentPanel.characters && currentPanel.characters.length > 0 && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Volume2 className="w-5 h-5 text-primary" />
+                  Panel Narration
+                </h3>
+                <TextToSpeech
+                  text={`Panel ${currentPage + 1}. ${currentPanel.characters?.map(char => char.name).join(', ')} appear in this scene.`}
+                  title={`Panel ${currentPage + 1} Description`}
+                  characterName="Narrator"
+                  variant="compact"
+                  className="mb-3"
+                />
+              </div>
+            )}
+
+            {/* Character dialogues TTS */}
+            {currentPanel.dialogues && currentPanel.dialogues.length > 0 && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Volume2 className="w-5 h-5 text-primary" />
+                  Character Dialogues
+                </h3>
+                <div className="space-y-3">
+                  {currentPanel.dialogues.map((dialogue, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-300">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm text-primary mb-1">{dialogue.character}</p>
+                        <p className="text-gray-700">{dialogue.text}</p>
+                      </div>
+                      <TextToSpeech
+                        text={dialogue.text}
+                        characterName={dialogue.character}
+                        variant="compact"
+                        className="ml-4"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Full comic reading mode */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Volume2 className="w-5 h-5 text-primary" />
+                Full Comic Reading
+              </h3>
+              <TextToSpeech
+                text={`${comic.title}. ${comic.description || ''}. ${panels.map((panel, index) => 
+                  `Panel ${index + 1}. ${panel.dialogues?.map(d => `${d.character} says: ${d.text}`).join('. ') || 'No dialogue in this panel.'}`
+                ).join('. ')}`}
+                title={comic.title}
+                characterName="Narrator"
+                variant="full"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

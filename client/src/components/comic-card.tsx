@@ -23,26 +23,29 @@ export default function ComicCard({ comic }: ComicCardProps) {
   const badge = getBadge();
 
   return (
-    <div className="comic-panel bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100">
-      <div className="relative">
+    <div className="comic-panel bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100 card-interactive hover:shadow-2xl hover:border-primary/20 group">
+      <div className="relative overflow-hidden">
         <img
           src={
             comic.coverImage ||
             "https://images.unsplash.com/photo-1560942485-b2a11cc13456?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400"
           }
           alt={comic.title}
-          className="w-full h-64 object-cover"
+          className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-110"
         />
         
         {/* Overlay for art style */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent text-white p-2">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent text-white p-2 transition-all duration-300 group-hover:from-black/50">
           <span className="text-xs font-medium">{comic.artStyle} style</span>
         </div>
+        
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
       
       <div className="p-5">
         <div className="flex justify-between items-start mb-3">
-          <h3 className="font-bangers text-xl text-dark">{comic.title}</h3>
+          <h3 className="font-bangers text-xl text-dark group-hover:text-primary transition-colors duration-300">{comic.title}</h3>
           {badge && (
             <Badge className={`bg-${badge.type} text-white`}>
               {badge.text}
@@ -71,7 +74,7 @@ export default function ComicCard({ comic }: ComicCardProps) {
           <Link href={`/preview-comic/${comic.id}`}>
             <Button
               size="sm"
-              className="bg-primary hover:bg-opacity-90 text-white"
+              className="bg-primary hover:bg-opacity-90 text-white hover:scale-105 transition-all duration-300"
             >
               Preview
             </Button>
