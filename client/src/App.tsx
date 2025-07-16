@@ -18,6 +18,19 @@ import Learn from "@/pages/learn";
 import Credits from "@/pages/credits";
 import Onboarding from "@/pages/onboarding";
 import SocialPreview from "@/pages/social-preview";
+import Profile from "@/pages/profile";
+import Settings from "@/pages/settings";
+import Pricing from "@/pages/pricing";
+import Features from "@/pages/features";
+import About from "@/pages/about";
+import Contact from "@/pages/contact";
+import Support from "@/pages/support";
+import Blog from "@/pages/blog";
+import Tutorials from "@/pages/tutorials";
+import Documentation from "@/pages/documentation";
+import Careers from "@/pages/careers";
+import Privacy from "@/pages/privacy";
+import Terms from "@/pages/terms";
 import OnboardingChecker from "@/components/onboarding-checker";
 
 function Router() {
@@ -36,6 +49,19 @@ function Router() {
       <Route path="/credits" component={Credits} />
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/social-preview" component={SocialPreview} />
+      <Route path="/profile" component={Profile} />
+      <Route path="/settings" component={Settings} />
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/features" component={Features} />
+      <Route path="/about" component={About} />
+      <Route path="/contact" component={Contact} />
+      <Route path="/support" component={Support} />
+      <Route path="/blog" component={Blog} />
+      <Route path="/tutorials" component={Tutorials} />
+      <Route path="/documentation" component={Documentation} />
+      <Route path="/careers" component={Careers} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
       <Route component={NotFound} />
     </Switch>
   );
