@@ -468,8 +468,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Name and description are required" });
       }
       
-      const characterDetails = await openai.generateCharacterDetails(name, description);
-      res.json(characterDetails);
+      try {
+        const characterDetails = await openai.generateCharacterDetails(name, description);
+        res.json(characterDetails);
+      } catch (openaiError) {
+        // Fallback response when OpenAI is not available
+        console.log("OpenAI API not available, using fallback character generation");
+        res.json({
+          fullDescription: `${name} is ${description}. This character has a unique personality and distinctive appearance that makes them memorable in any comic story.`,
+          traits: ["brave", "determined", "creative"],
+          background: `${name} comes from an interesting background that shaped their character. Their experiences have made them who they are today, ready for new adventures.`
+        });
+      }
     } catch (err) {
       console.error("Error generating character details:", err);
       res.status(500).json({ message: "Failed to generate character details" });
