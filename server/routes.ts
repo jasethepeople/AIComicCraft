@@ -467,7 +467,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const panelExists = existingPanels.some(p => p.sequence === panelRequest.sequence);
       
       // Generate panel image
-      const imageUrl = await openai.generateComicPanel(panelRequest);
+      let imageUrl;
+      try {
+        imageUrl = await openai.generateComicPanel(panelRequest);
+      } catch (openaiError) {
+        // Fallback when OpenAI is not available
+        console.log("OpenAI API not available, using fallback panel generation");
+        imageUrl = `https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300&q=80&text=${encodeURIComponent(panelRequest.description)}`;
+      }
       
       let panel;
       if (panelExists) {
