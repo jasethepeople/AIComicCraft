@@ -302,7 +302,11 @@ export default function Onboarding() {
               <h2 className="text-2xl font-bold mb-2">Choose your art style</h2>
               <p className="text-gray-600">What visual style appeals to you most?</p>
             </div>
-            <div className="space-y-3">
+            <RadioGroup 
+              value={data.artStyle} 
+              onValueChange={(value) => updateData({ artStyle: value })}
+              className="space-y-3"
+            >
               {ART_STYLES.map((style) => (
                 <div
                   key={style.id}
@@ -317,7 +321,6 @@ export default function Onboarding() {
                     <RadioGroupItem 
                       value={style.id} 
                       id={style.id}
-                      checked={data.artStyle === style.id}
                     />
                     <div>
                       <Label htmlFor={style.id} className="font-medium cursor-pointer">
@@ -328,7 +331,7 @@ export default function Onboarding() {
                   </div>
                 </div>
               ))}
-            </div>
+            </RadioGroup>
           </motion.div>
         );
 
