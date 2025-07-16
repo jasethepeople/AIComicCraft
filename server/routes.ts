@@ -7,7 +7,8 @@ import {
   insertPanelSchema,
   comicGenerationSchema,
   panelGenerationSchema,
-  animeGenerationSchema
+  animeGenerationSchema,
+  creditPurchaseSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -15,8 +16,17 @@ import bcrypt from "bcryptjs";
 import openai from "./openai";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import Stripe from "stripe";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize Stripe
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+  }
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2023-10-16",
+  });
+
   // Set up session middleware
   const MemoryStoreSession = MemoryStore(session);
   app.use(
@@ -330,6 +340,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const generationRequest = comicGenerationSchema.parse(req.body);
       
+      // Check and deduct credits (5 credits for story generation)
+      const creditsDeducted = await checkAndDeductCredits(req.session.userId!, 5, "Story generation");
+      if (!creditsDeducted) {
+        return res.status(402).json({ 
+          message: "Insufficient credits", 
+          required: 5,
+          action: "upgrade_or_purchase"
+        });
+      }
+      
       // Generate story outline using OpenAI
       const storyOutline = await openai.generateStoryOutline(generationRequest);
       
@@ -384,6 +404,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/generate/panel", authenticate, async (req, res) => {
     try {
       const panelRequest = panelGenerationSchema.parse(req.body);
+      
+      // Check and deduct credits (2 credits per panel)
+      const creditsDeducted = await checkAndDeductCredits(req.session.userId!, 2, "Panel generation", panelRequest.comicId);
+      if (!creditsDeducted) {
+        return res.status(402).json({ 
+          message: "Insufficient credits", 
+          required: 2,
+          action: "upgrade_or_purchase"
+        });
+      }
       
       // Verify that comic exists and user owns it
       const comic = await storage.getComic(panelRequest.comicId);
@@ -450,6 +480,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/generate/anime", authenticate, async (req, res) => {
     try {
       const animeRequest = animeGenerationSchema.parse(req.body);
+      
+      // Check and deduct credits (10 credits for anime generation)
+      const creditsDeducted = await checkAndDeductCredits(req.session.userId!, 10, "Anime generation");
+      if (!creditsDeducted) {
+        return res.status(402).json({ 
+          message: "Insufficient credits", 
+          required: 10,
+          action: "upgrade_or_purchase"
+        });
+      }
       
       // Generate anime using OpenAI
       const animeResult = await openai.generateAnime(animeRequest);
@@ -530,6 +570,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         frameType: req.body.frameType || "static"
       };
       
+      // Check and deduct credits (3 credits per anime frame)
+      const creditsDeducted = await checkAndDeductCredits(req.session.userId!, 3, "Anime frame generation", frameRequest.comicId);
+      if (!creditsDeducted) {
+        return res.status(402).json({ 
+          message: "Insufficient credits", 
+          required: 3,
+          action: "upgrade_or_purchase"
+        });
+      }
+      
       // Verify that comic exists and user owns it
       const comic = await storage.getComic(frameRequest.comicId);
       if (!comic) {
@@ -584,6 +634,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to generate anime frame" });
     }
   });
+
+  // Credit management routes
+  app.get("/api/credits/balance", authenticate, async (req, res) => {
+    try {
+      const credits = await storage.getUserCredits(req.session.userId!);
+      const user = await storage.getUser(req.session.userId!);
+      res.json({ 
+        credits, 
+        subscriptionTier: user?.subscriptionTier || "free",
+        subscriptionStatus: user?.subscriptionStatus || "active"
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get credit balance" });
+    }
+  });
+
+  app.get("/api/credits/transactions", authenticate, async (req, res) => {
+    try {
+      const transactions = await storage.getCreditTransactions(req.session.userId!);
+      res.json(transactions);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get credit transactions" });
+    }
+  });
+
+  // Subscription plans routes
+  app.get("/api/subscription/plans", async (_, res) => {
+    try {
+      const plans = await storage.getAllSubscriptionPlans();
+      res.json(plans);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get subscription plans" });
+    }
+  });
+
+  // Credit purchase route
+  app.post("/api/credits/purchase", authenticate, async (req, res) => {
+    try {
+      const purchaseRequest = creditPurchaseSchema.parse(req.body);
+      
+      // Credit pricing: $0.10 per credit (10 cents)
+      const pricePerCredit = 10; // in cents
+      const totalAmount = purchaseRequest.creditAmount * pricePerCredit;
+      
+      // Create Stripe payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: totalAmount,
+        currency: "usd",
+        metadata: {
+          userId: req.session.userId!.toString(),
+          creditAmount: purchaseRequest.creditAmount.toString(),
+          type: "credit_purchase"
+        }
+      });
+      
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        amount: totalAmount,
+        credits: purchaseRequest.creditAmount
+      });
+    } catch (err) {
+      if (err instanceof ZodError) {
+        const validationError = fromZodError(err);
+        return res.status(400).json({ message: validationError.message });
+      }
+      
+      console.error("Error creating credit purchase:", err);
+      res.status(500).json({ message: "Failed to create credit purchase" });
+    }
+  });
+
+  // Subscription purchase route
+  app.post("/api/subscription/purchase", authenticate, async (req, res) => {
+    try {
+      const { planTier, billingCycle } = req.body; // "monthly", "yearly", "lifetime"
+      
+      const plan = await storage.getSubscriptionPlan(planTier);
+      if (!plan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      
+      let amount = 0;
+      if (billingCycle === "monthly" && plan.priceMonthly) {
+        amount = plan.priceMonthly;
+      } else if (billingCycle === "yearly" && plan.priceYearly) {
+        amount = plan.priceYearly;
+      } else if (billingCycle === "lifetime" && plan.priceLifetime) {
+        amount = plan.priceLifetime;
+      } else {
+        return res.status(400).json({ message: "Invalid billing cycle for this plan" });
+      }
+      
+      // Create Stripe payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: "usd",
+        metadata: {
+          userId: req.session.userId!.toString(),
+          planTier,
+          billingCycle,
+          type: "subscription_purchase"
+        }
+      });
+      
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        amount,
+        planTier,
+        billingCycle
+      });
+    } catch (err) {
+      console.error("Error creating subscription purchase:", err);
+      res.status(500).json({ message: "Failed to create subscription purchase" });
+    }
+  });
+
+  // Stripe webhook to handle successful payments
+  app.post("/api/webhooks/stripe", async (req, res) => {
+    try {
+      // In production, you'd verify the webhook signature
+      const { type, data } = req.body;
+      
+      if (type === "payment_intent.succeeded") {
+        const paymentIntent = data.object;
+        const { userId, creditAmount, planTier, billingCycle, type: purchaseType } = paymentIntent.metadata;
+        
+        if (purchaseType === "credit_purchase") {
+          // Add credits to user account
+          await storage.addCredits(
+            parseInt(userId),
+            parseInt(creditAmount),
+            `Purchased ${creditAmount} credits`,
+            paymentIntent.id
+          );
+        } else if (purchaseType === "subscription_purchase") {
+          // Update user subscription
+          const expiresAt = billingCycle === "lifetime" ? undefined : 
+            billingCycle === "yearly" ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) :
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            
+          await storage.updateUserSubscription(parseInt(userId), planTier, expiresAt);
+          
+          // Reset credits based on new plan
+          await storage.resetMonthlyCredits(parseInt(userId));
+        }
+      }
+      
+      res.json({ received: true });
+    } catch (err) {
+      console.error("Error processing webhook:", err);
+      res.status(500).json({ message: "Failed to process webhook" });
+    }
+  });
+
+  // Check if user has enough credits and deduct them for generation
+  const checkAndDeductCredits = async (userId: number, requiredCredits: number, description: string, relatedId?: number): Promise<boolean> => {
+    const user = await storage.getUser(userId);
+    if (!user) return false;
+    
+    // Lifetime users have unlimited credits
+    if (user.subscriptionTier === "lifetime") {
+      return true;
+    }
+    
+    // Check if user has enough credits
+    if (user.credits < requiredCredits) {
+      return false;
+    }
+    
+    // Deduct credits
+    return await storage.deductCredits(userId, requiredCredits, description, relatedId);
+  };
 
   const httpServer = createServer(app);
   return httpServer;

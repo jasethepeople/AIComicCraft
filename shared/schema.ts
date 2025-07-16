@@ -9,6 +9,14 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
+  credits: integer("credits").default(10).notNull(), // Monthly credits
+  totalCreditsUsed: integer("total_credits_used").default(0).notNull(),
+  subscriptionTier: text("subscription_tier").default("free").notNull(), // free, basic, pro, lifetime
+  subscriptionStatus: text("subscription_status").default("active").notNull(), // active, cancelled, expired
+  subscriptionExpiresAt: timestamp("subscription_expires_at"),
+  lastCreditReset: timestamp("last_credit_reset").defaultNow().notNull(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -110,6 +118,64 @@ export type InsertPanel = z.infer<typeof insertPanelSchema>;
 export type ArtStyle = typeof artStyles.$inferSelect;
 export type InsertArtStyle = z.infer<typeof insertArtStyleSchema>;
 
+// Credit transactions schema
+export const creditTransactions = pgTable("credit_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  type: text("type").notNull(), // "used", "purchased", "refunded", "monthly_reset"
+  amount: integer("amount").notNull(), // positive for additions, negative for usage
+  description: text("description").notNull(),
+  relatedId: integer("related_id"), // comic/anime ID if credit was used for generation
+  stripePaymentIntentId: text("stripe_payment_intent_id"), // for purchased credits
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCreditTransactionSchema = createInsertSchema(creditTransactions).pick({
+  userId: true,
+  type: true,
+  amount: true,
+  description: true,
+  relatedId: true,
+  stripePaymentIntentId: true,
+});
+
+// Subscription plans schema
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // "Free", "Basic", "Pro", "Lifetime"
+  tier: text("tier").notNull(), // "free", "basic", "pro", "lifetime"
+  monthlyCredits: integer("monthly_credits").notNull(),
+  priceMonthly: integer("price_monthly"), // in cents, null for free/lifetime
+  priceYearly: integer("price_yearly"), // in cents, null for free
+  priceLifetime: integer("price_lifetime"), // in cents, null for non-lifetime
+  features: json("features").$type<string[]>().notNull().default([]),
+  isActive: boolean("is_active").default(true).notNull(),
+  stripePriceIdMonthly: text("stripe_price_id_monthly"),
+  stripePriceIdYearly: text("stripe_price_id_yearly"),
+  stripePriceIdLifetime: text("stripe_price_id_lifetime"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).pick({
+  name: true,
+  tier: true,
+  monthlyCredits: true,
+  priceMonthly: true,
+  priceYearly: true,
+  priceLifetime: true,
+  features: true,
+  isActive: true,
+  stripePriceIdMonthly: true,
+  stripePriceIdYearly: true,
+  stripePriceIdLifetime: true,
+});
+
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+
 // AI Generation schema for backend API interactions
 export const comicGenerationSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -182,9 +248,18 @@ export const panelGenerationSchema = z.object({
 
 export type PanelGenerationRequest = z.infer<typeof panelGenerationSchema>;
 
+// Credit purchase schema
+export const creditPurchaseSchema = z.object({
+  creditAmount: z.number().min(1).max(1000),
+  paymentMethod: z.enum(["stripe"]).default("stripe"),
+});
+
+export type CreditPurchaseRequest = z.infer<typeof creditPurchaseSchema>;
+
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({
   comics: many(comics),
+  creditTransactions: many(creditTransactions),
 }));
 
 export const comicsRelations = relations(comics, ({ one, many }) => ({
@@ -199,5 +274,12 @@ export const panelsRelations = relations(panels, ({ one }) => ({
   comic: one(comics, {
     fields: [panels.comicId],
     references: [comics.id],
+  }),
+}));
+
+export const creditTransactionsRelations = relations(creditTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [creditTransactions.userId],
+    references: [users.id],
   }),
 }));

@@ -1,15 +1,16 @@
 import { db } from "./db";
-import { artStyles, type InsertArtStyle } from "@shared/schema";
+import { artStyles, subscriptionPlans, type InsertArtStyle, type InsertSubscriptionPlan } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-// Initialize database with art styles if they don't exist
+// Initialize database with art styles and subscription plans if they don't exist
 export async function initializeDatabase() {
   try {
     // Check if art styles already exist
     const existingStyles = await db.select().from(artStyles).limit(1);
+    const existingPlans = await db.select().from(subscriptionPlans).limit(1);
     
-    if (existingStyles.length > 0) {
-      console.log("Database already initialized with art styles");
+    if (existingStyles.length > 0 && existingPlans.length > 0) {
+      console.log("Database already initialized with art styles and subscription plans");
       return;
     }
 
@@ -95,10 +96,88 @@ export async function initializeDatabase() {
       }
     ];
 
-    // Insert all art styles
-    const insertedStyles = await db.insert(artStyles).values(styles).returning();
-    
-    console.log(`Initialized database with ${insertedStyles.length} art styles`);
+    // Insert art styles if they don't exist
+    if (existingStyles.length === 0) {
+      const insertedStyles = await db.insert(artStyles).values(styles).returning();
+      console.log(`Initialized database with ${insertedStyles.length} art styles`);
+    }
+
+    // Insert subscription plans if they don't exist
+    if (existingPlans.length === 0) {
+      const plans: InsertSubscriptionPlan[] = [
+        {
+          name: "Free",
+          tier: "free",
+          monthlyCredits: 10,
+          priceMonthly: null,
+          priceYearly: null,
+          priceLifetime: null,
+          features: [
+            "10 AI generations per month",
+            "Basic comic creation",
+            "Community access",
+            "Standard quality exports"
+          ],
+          isActive: true
+        },
+        {
+          name: "Basic",
+          tier: "basic",
+          monthlyCredits: 50,
+          priceMonthly: 999, // $9.99
+          priceYearly: 9999, // $99.99 (2 months free)
+          priceLifetime: null,
+          features: [
+            "50 AI generations per month",
+            "Advanced comic creation",
+            "Premium art styles",
+            "High-quality exports",
+            "Priority support"
+          ],
+          isActive: true
+        },
+        {
+          name: "Pro",
+          tier: "pro",
+          monthlyCredits: 200,
+          priceMonthly: 2999, // $29.99
+          priceYearly: 29999, // $299.99 (2 months free)
+          priceLifetime: null,
+          features: [
+            "200 AI generations per month",
+            "Unlimited comic projects",
+            "Anime creation studio",
+            "Commercial license",
+            "Advanced editing tools",
+            "Custom art styles",
+            "API access",
+            "Priority support"
+          ],
+          isActive: true
+        },
+        {
+          name: "Lifetime",
+          tier: "lifetime",
+          monthlyCredits: 999999, // Unlimited
+          priceMonthly: null,
+          priceYearly: null,
+          priceLifetime: 49999, // $499.99
+          features: [
+            "Unlimited AI generations",
+            "All Pro features",
+            "Lifetime access",
+            "No monthly fees",
+            "Exclusive content",
+            "Early access to new features",
+            "Direct contact with creators"
+          ],
+          isActive: true
+        }
+      ];
+
+      const insertedPlans = await db.insert(subscriptionPlans).values(plans).returning();
+      console.log(`Initialized database with ${insertedPlans.length} subscription plans`);
+    }
   } catch (error) {
     console.error("Failed to initialize database:", error);
   }

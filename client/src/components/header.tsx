@@ -14,7 +14,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
-import { Menu, X, UserCircle, LogOut, Settings } from "lucide-react";
+import { Menu, X, UserCircle, LogOut, Settings, Zap, CreditCard } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function Header() {
   const [location, setLocation] = useLocation();
@@ -23,6 +24,13 @@ export default function Header() {
 
   const { data: user } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
+    onError: () => null
+  });
+
+  // Fetch credit balance for authenticated users
+  const { data: creditBalance } = useQuery({
+    queryKey: ["/api/credits/balance"],
+    enabled: !!user,
     onError: () => null
   });
 
@@ -74,6 +82,19 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center space-x-4">
+          {/* Credit Balance Display for Authenticated Users */}
+          {user && creditBalance && (
+            <Link href="/credits">
+              <Button variant="ghost" className="text-white hover:text-secondary flex items-center space-x-2">
+                <Zap className="h-4 w-4 text-yellow-500" />
+                <span>{creditBalance.credits}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {creditBalance.subscriptionTier === "lifetime" ? "∞" : creditBalance.subscriptionTier}
+                </Badge>
+              </Button>
+            </Link>
+          )}
+
           {!user ? (
             <Link href="/login">
               <Button variant="ghost" className="text-white hover:text-secondary">
@@ -92,6 +113,12 @@ export default function Header() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <Link href="/credits">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span>Credits & Billing</span>
+                  </DropdownMenuItem>
+                </Link>
                 <Link href="/profile">
                   <DropdownMenuItem className="cursor-pointer">
                     <UserCircle className="mr-2 h-4 w-4" />

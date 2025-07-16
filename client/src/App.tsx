@@ -15,6 +15,7 @@ import Register from "@/pages/register";
 import Login from "@/pages/login";
 import Community from "@/pages/community";
 import Learn from "@/pages/learn";
+import Credits from "@/pages/credits";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/community" component={Community} />
       <Route path="/learn" component={Learn} />
+      <Route path="/credits" component={Credits} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,12 +1,14 @@
 import { 
-  users, comics, panels, artStyles,
+  users, comics, panels, artStyles, creditTransactions, subscriptionPlans,
   type User, type InsertUser, 
   type Comic, type InsertComic, 
   type Panel, type InsertPanel, 
-  type ArtStyle, type InsertArtStyle 
+  type ArtStyle, type InsertArtStyle,
+  type CreditTransaction, type InsertCreditTransaction,
+  type SubscriptionPlan, type InsertSubscriptionPlan
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -35,6 +37,20 @@ export interface IStorage {
   getAllArtStyles(): Promise<ArtStyle[]>;
   getArtStyle(id: number): Promise<ArtStyle | undefined>;
   createArtStyle(artStyle: InsertArtStyle): Promise<ArtStyle>;
+
+  // Credit operations
+  getUserCredits(userId: number): Promise<number>;
+  updateUserCredits(userId: number, credits: number): Promise<User | undefined>;
+  deductCredits(userId: number, amount: number, description: string, relatedId?: number): Promise<boolean>;
+  addCredits(userId: number, amount: number, description: string, stripePaymentIntentId?: string): Promise<boolean>;
+  createCreditTransaction(transaction: any): Promise<any>;
+  getCreditTransactions(userId: number): Promise<any[]>;
+  
+  // Subscription operations
+  updateUserSubscription(userId: number, tier: string, expiresAt?: Date): Promise<User | undefined>;
+  getAllSubscriptionPlans(): Promise<any[]>;
+  getSubscriptionPlan(tier: string): Promise<any | undefined>;
+  resetMonthlyCredits(userId: number): Promise<boolean>;
 }
 
 // In-memory storage implementation
@@ -342,6 +358,151 @@ export class DatabaseStorage implements IStorage {
       .values(insertArtStyle)
       .returning();
     return artStyle;
+  }
+
+  // Credit operations
+  async getUserCredits(userId: number): Promise<number> {
+    const [user] = await db.select({ credits: users.credits }).from(users).where(eq(users.id, userId));
+    return user?.credits || 0;
+  }
+
+  async updateUserCredits(userId: number, credits: number): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ credits })
+      .where(eq(users.id, userId))
+      .returning();
+    return updatedUser || undefined;
+  }
+
+  async deductCredits(userId: number, amount: number, description: string, relatedId?: number): Promise<boolean> {
+    try {
+      // Start transaction
+      const user = await this.getUser(userId);
+      if (!user || user.credits < amount) {
+        return false;
+      }
+
+      // Deduct credits
+      const newCredits = user.credits - amount;
+      await this.updateUserCredits(userId, newCredits);
+
+      // Record transaction
+      await db.insert(creditTransactions).values({
+        userId,
+        type: "used",
+        amount: -amount,
+        description,
+        relatedId,
+      });
+
+      // Update total credits used
+      await db
+        .update(users)
+        .set({ totalCreditsUsed: user.totalCreditsUsed + amount })
+        .where(eq(users.id, userId));
+
+      return true;
+    } catch (error) {
+      console.error("Error deducting credits:", error);
+      return false;
+    }
+  }
+
+  async addCredits(userId: number, amount: number, description: string, stripePaymentIntentId?: string): Promise<boolean> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user) return false;
+
+      // Add credits
+      const newCredits = user.credits + amount;
+      await this.updateUserCredits(userId, newCredits);
+
+      // Record transaction
+      await db.insert(creditTransactions).values({
+        userId,
+        type: "purchased",
+        amount,
+        description,
+        stripePaymentIntentId,
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Error adding credits:", error);
+      return false;
+    }
+  }
+
+  async createCreditTransaction(transaction: InsertCreditTransaction): Promise<CreditTransaction> {
+    const [creditTransaction] = await db
+      .insert(creditTransactions)
+      .values(transaction)
+      .returning();
+    return creditTransaction;
+  }
+
+  async getCreditTransactions(userId: number): Promise<CreditTransaction[]> {
+    return await db
+      .select()
+      .from(creditTransactions)
+      .where(eq(creditTransactions.userId, userId))
+      .orderBy(desc(creditTransactions.createdAt));
+  }
+
+  // Subscription operations
+  async updateUserSubscription(userId: number, tier: string, expiresAt?: Date): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        subscriptionTier: tier,
+        subscriptionExpiresAt: expiresAt,
+        subscriptionStatus: "active"
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updatedUser || undefined;
+  }
+
+  async getAllSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    return await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.isActive, true));
+  }
+
+  async getSubscriptionPlan(tier: string): Promise<SubscriptionPlan | undefined> {
+    const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.tier, tier));
+    return plan || undefined;
+  }
+
+  async resetMonthlyCredits(userId: number): Promise<boolean> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user) return false;
+
+      const plan = await this.getSubscriptionPlan(user.subscriptionTier);
+      if (!plan) return false;
+
+      // Reset credits based on subscription plan
+      await db
+        .update(users)
+        .set({ 
+          credits: plan.monthlyCredits,
+          lastCreditReset: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      // Record transaction
+      await db.insert(creditTransactions).values({
+        userId,
+        type: "monthly_reset",
+        amount: plan.monthlyCredits,
+        description: `Monthly credit reset for ${plan.name} plan`,
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Error resetting monthly credits:", error);
+      return false;
+    }
   }
 }
 

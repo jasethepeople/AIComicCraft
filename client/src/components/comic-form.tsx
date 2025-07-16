@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CharacterForm from "./character-form";
+import InsufficientCreditsDialog from "./insufficient-credits-dialog";
 import { PlusCircle, Loader2 } from "lucide-react";
 
 // Define comic form schema
@@ -46,10 +47,18 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
   
   const [characters, setCharacters] = useState<Array<{ name: string; description: string }>>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showInsufficientCredits, setShowInsufficientCredits] = useState(false);
+  const [creditError, setCreditError] = useState<{ required: number; current: number; action: string } | null>(null);
   
   // Fetch art styles
   const { data: artStyles = [] } = useQuery<ArtStyle[]>({
     queryKey: ["/api/art-styles"],
+  });
+
+  // Fetch credit balance for authenticated users
+  const { data: creditBalance } = useQuery({
+    queryKey: ["/api/credits/balance"],
+    onError: () => null
   });
   
   // Initialize form with existing comic data or defaults
@@ -122,7 +131,8 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
           prompt: data.prompt,
         };
         
-        const result = await openai.generateComicStory(generationRequest);
+        const response = await apiRequest("POST", "/api/generate/story", generationRequest);
+        const result = await response.json();
         
         toast({
           title: "Comic created",
@@ -132,13 +142,35 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
         // Redirect to the editor
         setLocation(`/creator-studio/${result.comicId}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating/updating comic:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create comic. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Handle insufficient credits error
+      if (error.message?.includes("status: 402") || error.message?.includes("Insufficient credits")) {
+        try {
+          const errorResponse = await error.response?.json();
+          setCreditError({
+            required: errorResponse.required || 5,
+            current: creditBalance?.credits || 0,
+            action: "story generation"
+          });
+          setShowInsufficientCredits(true);
+        } catch {
+          // Fallback if error parsing fails
+          setCreditError({
+            required: 5,
+            current: creditBalance?.credits || 0,
+            action: "story generation"
+          });
+          setShowInsufficientCredits(true);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create comic. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -321,6 +353,17 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
           </div>
         </form>
       </Form>
+
+      {/* Insufficient Credits Dialog */}
+      {creditError && (
+        <InsufficientCreditsDialog
+          open={showInsufficientCredits}
+          onOpenChange={setShowInsufficientCredits}
+          requiredCredits={creditError.required}
+          currentCredits={creditError.current}
+          actionType={creditError.action}
+        />
+      )}
     </div>
   );
 }
