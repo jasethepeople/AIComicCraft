@@ -214,11 +214,11 @@ export default function TutorialProgressTracker() {
 // Export the markTutorialComplete function for use in other components
 export { TutorialProgressTracker };
 export const useTutorialProgress = () => {
-  const markTutorialComplete = (tutorialId: string) => {
+  const markTutorialComplete = (tutorialId: string, quizScore?: number) => {
     const savedProgress = localStorage.getItem('comicai-tutorial-progress');
     let progress: TutorialProgress = {
       completed: [],
-      totalTutorials: 4,
+      totalTutorials: 8,
       skillLevel: "Beginner",
       achievementsBadges: []
     };

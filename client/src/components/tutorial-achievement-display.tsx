@@ -1,259 +1,217 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Trophy, Award, Star, CheckCircle, Zap, Target, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Star, Award, BookOpen, Target, Crown, Zap, Medal } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 
 interface Achievement {
   id: string;
-  achievementId: string;
-  unlockedAt: string;
-}
-
-interface AchievementDefinition {
-  id: string;
-  title: string;
+  name: string;
   description: string;
-  icon: React.ComponentType<any>;
-  category: "completion" | "performance" | "special";
-  rarity: "common" | "rare" | "epic" | "legendary";
+  icon: any;
+  unlockedAt?: Date;
+  progress?: number;
+  maxProgress?: number;
 }
 
-const achievementDefinitions: AchievementDefinition[] = [
+const allAchievements: Achievement[] = [
   {
-    id: "first_tutorial",
-    title: "First Steps",
+    id: "first_steps",
+    name: "First Steps",
     description: "Complete your first tutorial",
-    icon: BookOpen,
-    category: "completion",
-    rarity: "common"
-  },
-  {
-    id: "intermediate_learner",
-    title: "Rising Artist",
-    description: "Complete 3 tutorials",
     icon: Star,
-    category: "completion",
-    rarity: "common"
   },
   {
-    id: "advanced_student",
-    title: "Art Scholar",
-    description: "Complete 6 tutorials",
+    id: "rising_artist", 
+    name: "Rising Artist",
+    description: "Complete 3 tutorials",
     icon: Award,
-    category: "completion",
-    rarity: "rare"
+    maxProgress: 3,
   },
   {
-    id: "master_artist",
-    title: "Master Creator",
+    id: "art_scholar",
+    name: "Art Scholar", 
+    description: "Complete 6 tutorials",
+    icon: Trophy,
+    maxProgress: 6,
+  },
+  {
+    id: "master_creator",
+    name: "Master Creator",
     description: "Complete all 8 tutorials",
-    icon: Crown,
-    category: "completion",
-    rarity: "legendary"
+    icon: CheckCircle,
+    maxProgress: 8,
   },
   {
-    id: "perfect_score",
-    title: "Perfectionist",
+    id: "perfectionist",
+    name: "Perfectionist",
     description: "Score 100% on any quiz",
     icon: Target,
-    category: "performance",
-    rarity: "epic"
   },
   {
     id: "quiz_master",
-    title: "Quiz Master",
-    description: "Score 100% on 3 different quizzes",
+    name: "Quiz Master",
+    description: "Score 100% on 3 quizzes",
     icon: Zap,
-    category: "performance",
-    rarity: "legendary"
+    maxProgress: 3,
   },
   {
     id: "speed_learner",
-    title: "Speed Learner",
+    name: "Speed Learner", 
     description: "Complete a tutorial in under 10 minutes",
-    icon: Medal,
-    category: "special",
-    rarity: "rare"
-  }
+    icon: Clock,
+  },
 ];
 
-const rarityColors = {
-  common: "bg-gray-100 border-gray-300 text-gray-800",
-  rare: "bg-blue-100 border-blue-300 text-blue-800",
-  epic: "bg-purple-100 border-purple-300 text-purple-800",
-  legendary: "bg-yellow-100 border-yellow-300 text-yellow-800"
-};
-
 export default function TutorialAchievementDisplay() {
-  const [showAll, setShowAll] = useState(false);
-  const [newAchievements, setNewAchievements] = useState<string[]>([]);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
+  const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
 
-  const { data: achievements = [], isLoading } = useQuery({
+  // Fetch achievements from API
+  const { data: serverAchievements = [] } = useQuery({
     queryKey: ["/api/tutorials/achievements"],
-    staleTime: 60000, // Cache for 1 minute
+    staleTime: 30000, // Cache for 30 seconds
   });
 
-  const unlockedIds = new Set(achievements.map((a: Achievement) => a.achievementId));
-  const unlockedAchievements = achievementDefinitions.filter(def => unlockedIds.has(def.id));
-  const lockedAchievements = achievementDefinitions.filter(def => !unlockedIds.has(def.id));
-
-  // Show notification for new achievements
+  // Load achievements from localStorage as fallback
   useEffect(() => {
-    const lastSeen = localStorage.getItem('lastSeenAchievements');
-    const lastSeenIds = lastSeen ? JSON.parse(lastSeen) : [];
-    const newIds = unlockedAchievements
-      .map(a => a.id)
-      .filter(id => !lastSeenIds.includes(id));
-    
-    if (newIds.length > 0) {
-      setNewAchievements(newIds);
-      localStorage.setItem('lastSeenAchievements', JSON.stringify(unlockedAchievements.map(a => a.id)));
+    if (serverAchievements.length > 0) {
+      // Use server data if available
+      const achievements = allAchievements.map(achievement => {
+        const serverAchievement = serverAchievements.find((a: any) => a.achievementId === achievement.id);
+        return {
+          ...achievement,
+          unlockedAt: serverAchievement?.unlockedAt ? new Date(serverAchievement.unlockedAt) : undefined,
+        };
+      }).filter(a => a.unlockedAt);
+      
+      setUnlockedAchievements(achievements);
+    } else {
+      // Fallback to localStorage
+      const savedProgress = localStorage.getItem('comicai-tutorial-progress');
+      if (savedProgress) {
+        try {
+          const progress = JSON.parse(savedProgress);
+          const completedCount = progress.completed?.length || 0;
+          
+          // Calculate which achievements should be unlocked
+          const unlocked = allAchievements.filter(achievement => {
+            switch (achievement.id) {
+              case "first_steps":
+                return completedCount >= 1;
+              case "rising_artist":
+                return completedCount >= 3;
+              case "art_scholar":
+                return completedCount >= 6;
+              case "master_creator":
+                return completedCount >= 8;
+              default:
+                return false;
+            }
+          }).map(a => ({ ...a, unlockedAt: new Date() }));
+          
+          setUnlockedAchievements(unlocked);
+        } catch (error) {
+          console.error('Error loading achievements:', error);
+        }
+      }
     }
-  }, [achievements]);
+  }, [serverAchievements]);
 
-  if (isLoading) {
-    return (
+  // Listen for new achievements
+  useEffect(() => {
+    const handleAchievementUnlock = (event: CustomEvent) => {
+      const achievement = allAchievements.find(a => a.id === event.detail.achievementId);
+      if (achievement) {
+        const unlockedAchievement = { ...achievement, unlockedAt: new Date() };
+        setUnlockedAchievements(prev => [...prev, unlockedAchievement]);
+        setNewAchievement(unlockedAchievement);
+        
+        // Clear notification after 5 seconds
+        setTimeout(() => setNewAchievement(null), 5000);
+      }
+    };
+
+    window.addEventListener('achievementUnlocked', handleAchievementUnlock as EventListener);
+    return () => window.removeEventListener('achievementUnlocked', handleAchievementUnlock as EventListener);
+  }, []);
+
+  if (unlockedAchievements.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Achievement Display */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
+            <Trophy className="h-5 w-5 text-yellow-500" />
             Achievements
           </CardTitle>
+          <CardDescription>
+            Your tutorial accomplishments ({unlockedAchievements.length} unlocked)
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="animate-pulse space-y-2">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-12 bg-gray-200 rounded" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {unlockedAchievements.map((achievement, index) => (
+              <motion.div
+                key={achievement.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+                className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+              >
+                <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
+                  <achievement.icon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-yellow-800 dark:text-yellow-300">
+                    {achievement.name}
+                  </h4>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                    {achievement.description}
+                  </p>
+                  {achievement.unlockedAt && (
+                    <Badge variant="secondary" className="text-xs mt-1">
+                      {achievement.unlockedAt.toLocaleDateString()}
+                    </Badge>
+                  )}
+                </div>
+              </motion.div>
             ))}
           </div>
         </CardContent>
       </Card>
-    );
-  }
 
-  const displayAchievements = showAll ? achievementDefinitions : unlockedAchievements.slice(0, 3);
-
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
-            Achievements ({unlockedAchievements.length}/{achievementDefinitions.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <AnimatePresence>
-            {displayAchievements.map((achievement) => {
-              const isUnlocked = unlockedIds.has(achievement.id);
-              const isNew = newAchievements.includes(achievement.id);
-              const Icon = achievement.icon;
-              
-              return (
-                <motion.div
-                  key={achievement.id}
-                  initial={isNew ? { scale: 0.8, opacity: 0 } : false}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
-                    isUnlocked 
-                      ? rarityColors[achievement.rarity] 
-                      : "bg-gray-50 border-gray-200 text-gray-500"
-                  } ${isNew ? "ring-2 ring-yellow-400 shadow-lg" : ""}`}
-                >
-                  <div className={`p-2 rounded-full ${
-                    isUnlocked ? "bg-white/50" : "bg-gray-200"
-                  }`}>
-                    <Icon className={`h-5 w-5 ${
-                      isUnlocked ? "text-current" : "text-gray-400"
-                    }`} />
+      {/* New Achievement Notification */}
+      <AnimatePresence>
+        {newAchievement && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            className="fixed bottom-4 right-4 z-50"
+          >
+            <Card className="w-80 bg-gradient-to-r from-yellow-400 to-orange-400 text-white border-yellow-300">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-full">
+                    <newAchievement.icon className="h-6 w-6" />
                   </div>
-                  
-                  <div className="flex-1">
-                    <h4 className={`font-semibold ${
-                      isUnlocked ? "text-current" : "text-gray-400"
-                    }`}>
-                      {achievement.title}
-                    </h4>
-                    <p className={`text-sm ${
-                      isUnlocked ? "text-current opacity-80" : "text-gray-400"
-                    }`}>
-                      {achievement.description}
-                    </p>
+                  <div>
+                    <h4 className="font-bold">Achievement Unlocked!</h4>
+                    <p className="text-sm">{newAchievement.name}</p>
+                    <p className="text-xs opacity-90">{newAchievement.description}</p>
                   </div>
-                  
-                  <div className="flex flex-col items-end gap-1">
-                    <Badge variant={isUnlocked ? "default" : "secondary"} className="text-xs">
-                      {achievement.rarity}
-                    </Badge>
-                    {isUnlocked && (
-                      <Badge variant="secondary" className="text-xs">
-                        ✓ Unlocked
-                      </Badge>
-                    )}
-                    {isNew && (
-                      <Badge className="text-xs bg-yellow-500 text-white animate-pulse">
-                        NEW!
-                      </Badge>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-          
-          {!showAll && achievementDefinitions.length > 3 && (
-            <Button 
-              variant="outline" 
-              onClick={() => setShowAll(true)}
-              className="w-full"
-            >
-              Show All Achievements ({lockedAchievements.length} locked)
-            </Button>
-          )}
-          
-          {showAll && (
-            <Button 
-              variant="outline" 
-              onClick={() => setShowAll(false)}
-              className="w-full"
-            >
-              Show Less
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-      
-      {newAchievements.length > 0 && (
-        <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 50, opacity: 0 }}
-          className="fixed bottom-4 right-4 z-50"
-        >
-          <Card className="bg-yellow-50 border-yellow-200 shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-yellow-600" />
-                <span className="font-semibold text-yellow-800">
-                  New Achievement{newAchievements.length > 1 ? 's' : ''} Unlocked!
-                </span>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={() => setNewAchievements([])}
-                >
-                  ✕
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

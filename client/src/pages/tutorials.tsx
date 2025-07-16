@@ -300,8 +300,8 @@ export default function Tutorials() {
     return () => window.removeEventListener('tutorialProgressUpdate', handleProgressUpdate as EventListener);
   }, []);
 
-  const markComplete = (tutorialId: string) => {
-    markTutorialComplete(tutorialId);
+  const markComplete = (tutorialId: string, quizScore?: number) => {
+    markTutorialComplete(tutorialId, quizScore);
     setCompletedTutorials(prev => new Set(prev).add(tutorialId));
   };
 
