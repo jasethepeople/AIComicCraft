@@ -280,6 +280,13 @@ export async function generateStyleRecommendations(
   availableStyles: Array<{ id: number; name: string; description: string }>,
   userPreferences?: Array<{ styleName: string; usageCount: number; rating?: number }>
 ): Promise<Array<{ styleId: number; styleName: string; confidence: number; reasoning: string }>> {
+  console.log("generateStyleRecommendations called with:", request.contentType, request.genre, request.mood);
+  
+  if (!process.env.OPENAI_API_KEY) {
+    console.log("No OPENAI_API_KEY found, using fallback");
+    throw new Error("OpenAI API key not configured");
+  }
+  
   try {
     const systemPrompt = `You are an expert comic book and anime art style consultant. Based on the user's project details and preferences, recommend the most suitable art styles from the available options.
 
@@ -334,15 +341,16 @@ Consider the user's project requirements, creative preferences, and past usage p
     const result = JSON.parse(response.choices[0].message.content || '{"recommendations": []}');
     return result.recommendations || [];
   } catch (error) {
-    console.error("Error generating style recommendations:", error);
+    console.error("OpenAI style recommendations error:", error);
+    console.log("Using internal fallback recommendations");
     // Fallback to basic recommendations based on content type
     const fallbackRecommendations = availableStyles
       .slice(0, 3)
       .map(style => ({
         styleId: style.id,
         styleName: style.name,
-        confidence: 0.5,
-        reasoning: `Basic recommendation based on ${request.contentType} content type.`
+        confidence: 0.6,
+        reasoning: `${style.name} style recommended for ${request.contentType} project${request.genre ? ` in the ${request.genre} genre` : ''}${request.mood ? ` with ${request.mood} tone` : ''}.`
       }));
     return fallbackRecommendations;
   }

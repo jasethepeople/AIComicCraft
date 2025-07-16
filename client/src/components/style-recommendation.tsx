@@ -64,9 +64,10 @@ export default function StyleRecommendation({ onStyleSelect, initialData }: Styl
     },
     onSuccess: (data) => {
       setShowRecommendations(true);
+      const recommendations = data.recommendations || data;
       toast({
         title: "Recommendations Generated!",
-        description: `Found ${data.recommendations.length} suitable art styles for your project.`,
+        description: `Found ${Array.isArray(recommendations) ? recommendations.length : (data.recommendations?.length || 0)} suitable art styles for your project.`,
       });
     },
     onError: (error: any) => {
@@ -127,7 +128,7 @@ export default function StyleRecommendation({ onStyleSelect, initialData }: Styl
     return "text-orange-600";
   };
 
-  const recommendations = recommendationMutation.data?.recommendations || [];
+  const recommendations = recommendationMutation.data?.recommendations || recommendationMutation.data || [];
 
   return (
     <div className="space-y-6">

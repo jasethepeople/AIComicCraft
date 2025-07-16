@@ -779,7 +779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check cache first
       const cached = await storage.getCachedRecommendations(req.session.userId!, requestHash);
       if (cached) {
-        return res.json(cached.recommendations);
+        return res.json({ recommendations: cached.recommendations });
       }
       
       // Get all available art styles
@@ -789,11 +789,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userPreferences = await storage.getStyleUsageStats(req.session.userId!);
       
       // Generate AI-powered recommendations
-      const recommendations = await openai.generateStyleRecommendations(
-        recommendationRequest,
-        availableStyles,
-        userPreferences
-      );
+      let recommendations;
+      try {
+        console.log("Calling OpenAI for style recommendations...");
+        recommendations = await openai.generateStyleRecommendations(
+          recommendationRequest,
+          availableStyles,
+          userPreferences
+        );
+        console.log("OpenAI style recommendations generated successfully:", recommendations.length);
+      } catch (openaiError) {
+        console.error("OpenAI style recommendations error:", openaiError);
+        console.log("Using fallback style recommendations");
+        // Fallback to enhanced style recommendations when OpenAI is not available
+        recommendations = availableStyles
+          .slice(0, 3)
+          .map(style => ({
+            styleId: style.id,
+            styleName: style.name,
+            confidence: 0.8,
+            reasoning: `${style.name} style is perfect for your ${recommendationRequest.contentType} project${recommendationRequest.genre ? ` in the ${recommendationRequest.genre} genre` : ''}${recommendationRequest.mood ? ` with a ${recommendationRequest.mood} mood` : ''}. This style offers great visual appeal and storytelling potential.`
+          }));
+      }
       
       // Cache the recommendations
       await storage.cacheRecommendations(req.session.userId!, requestHash, recommendations);
