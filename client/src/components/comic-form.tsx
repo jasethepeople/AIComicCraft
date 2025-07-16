@@ -8,6 +8,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import openai from "@/lib/openai";
 import { Comic, ArtStyle } from "@shared/schema";
+
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -56,9 +57,12 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
   });
 
   // Check authentication status
-  const { data: authUser } = useQuery({
+  const { data: authUser, isLoading: authLoading } = useQuery({
     queryKey: ["/api/auth/me"],
     retry: false,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   // Fetch credit balance for authenticated users
@@ -209,7 +213,16 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
     }
   };
 
-  // Show login prompt if user is not authenticated
+  // Show loading or login prompt if user is not authenticated
+  if (authLoading) {
+    return (
+      <div className="bg-white rounded-xl p-6 shadow-md text-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-gray-600">Checking authentication...</p>
+      </div>
+    );
+  }
+
   if (!authUser) {
     return (
       <div className="bg-white rounded-xl p-6 shadow-md text-center">

@@ -45,16 +45,19 @@ export default function Login() {
     try {
       await apiRequest("POST", "/api/auth/login", data);
       
-      // Invalidate auth query cache
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      // Invalidate auth query cache and refetch immediately
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
       
       toast({
         title: "Login successful",
         description: "Welcome back to ComicAI!",
       });
       
-      // Redirect to creator studio
-      setLocation("/creator-studio");
+      // Small delay to ensure queries are updated
+      setTimeout(() => {
+        setLocation("/creator-studio");
+      }, 100);
     } catch (error) {
       toast({
         title: "Login failed",
