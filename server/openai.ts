@@ -305,17 +305,21 @@ Content Type: ${request.contentType}
 ${request.genre ? `Genre: ${request.genre}` : ''}
 ${request.targetAudience ? `Target Audience: ${request.targetAudience}` : ''}
 ${request.mood ? `Mood/Tone: ${request.mood}` : ''}
+${request.colorPalette ? `Color Palette: ${request.colorPalette}` : ''}
+${request.complexity ? `Visual Complexity: ${request.complexity}` : ''}
+${request.timeOfDay ? `Time of Day: ${request.timeOfDay}` : ''}
+${request.setting ? `Setting: ${request.setting}` : ''}
 ${request.characters ? `Characters: ${request.characters.map(c => `${c.name} (${c.description})`).join(', ')}` : ''}
 
 Available Art Styles:
 ${availableStyles.map(style => `ID ${style.id}: ${style.name} - ${style.description}`).join('\n')}
 
 ${userPreferences && userPreferences.length > 0 ? 
-`User's Previous Style Usage:
+`User's Previous Style Usage & Preferences:
 ${userPreferences.map(pref => `${pref.styleName}: Used ${pref.usageCount} times${pref.rating ? `, Rated ${pref.rating}/5 stars` : ''}`).join('\n')}` : 
 'No previous style usage data available.'}
 
-Please recommend the most suitable art styles for this project.`;
+Consider the user's project requirements, creative preferences, and past usage patterns to recommend the most suitable art styles.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user

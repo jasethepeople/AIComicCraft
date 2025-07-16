@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Sparkles, Star, StarIcon, TrendingUp, Palette } from "lucide-react";
+import { Sparkles, Star, StarIcon, TrendingUp, Palette, Users, BarChart3, Lightbulb, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface StyleRecommendation {
@@ -41,6 +42,10 @@ export default function StyleRecommendation({ onStyleSelect, initialData }: Styl
     genre: "",
     targetAudience: "",
     mood: "",
+    colorPalette: "",
+    complexity: "",
+    timeOfDay: "",
+    setting: "",
     characters: initialData?.characters || [],
   });
 

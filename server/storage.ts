@@ -1,15 +1,17 @@
 import { 
-  users, comics, panels, artStyles, creditTransactions, subscriptionPlans, userStylePreferences,
+  users, comics, panels, artStyles, creditTransactions, subscriptionPlans, userStylePreferences, styleRecommendationCache, styleTrends,
   type User, type InsertUser, 
   type Comic, type InsertComic, 
   type Panel, type InsertPanel, 
   type ArtStyle, type InsertArtStyle,
   type CreditTransaction, type InsertCreditTransaction,
   type SubscriptionPlan, type InsertSubscriptionPlan,
-  type UserStylePreference, type InsertUserStylePreference
+  type UserStylePreference, type InsertUserStylePreference,
+  type StyleRecommendationCache, type InsertStyleRecommendationCache,
+  type StyleTrend, type InsertStyleTrend
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, gt, gte, ne } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -55,9 +57,17 @@ export interface IStorage {
   
   // Style preference operations
   getUserStylePreferences(userId: number): Promise<UserStylePreference[]>;
-  recordStyleUsage(userId: number, artStyleId: number): Promise<UserStylePreference>;
+  recordStyleUsage(userId: number, artStyleId: number, contextTags?: string[], projectType?: string): Promise<UserStylePreference>;
   rateArtStyle(userId: number, artStyleId: number, rating: number): Promise<UserStylePreference | undefined>;
   getStyleUsageStats(userId: number): Promise<Array<{ styleName: string; usageCount: number; rating?: number; artStyleId: number }>>;
+  
+  // Advanced recommendation features
+  getCachedRecommendations(userId: number, requestHash: string): Promise<StyleRecommendationCache | undefined>;
+  cacheRecommendations(userId: number, requestHash: string, recommendations: any): Promise<StyleRecommendationCache>;
+  getStyleTrends(period?: string): Promise<StyleTrend[]>;
+  updateStyleTrends(): Promise<void>;
+  getPersonalizedStyleInsights(userId: number): Promise<any>;
+  getSimilarUsers(userId: number): Promise<Array<{ userId: number; similarity: number }>>;
 }
 
 // In-memory storage implementation
@@ -520,7 +530,7 @@ export class DatabaseStorage implements IStorage {
     return preferences;
   }
 
-  async recordStyleUsage(userId: number, artStyleId: number): Promise<UserStylePreference> {
+  async recordStyleUsage(userId: number, artStyleId: number, contextTags?: string[], projectType?: string): Promise<UserStylePreference> {
     // Check if preference already exists
     const [existingPreference] = await db
       .select()
@@ -535,6 +545,8 @@ export class DatabaseStorage implements IStorage {
         .set({
           usageCount: existingPreference.usageCount + 1,
           lastUsed: new Date(),
+          contextTags: contextTags || existingPreference.contextTags,
+          projectType: projectType || existingPreference.projectType,
         })
         .where(eq(userStylePreferences.id, existingPreference.id))
         .returning();
@@ -547,6 +559,8 @@ export class DatabaseStorage implements IStorage {
           userId,
           artStyleId,
           usageCount: 1,
+          contextTags,
+          projectType,
         })
         .returning();
       return newPreference;
@@ -586,6 +600,157 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(userStylePreferences.usageCount));
       
     return stats;
+  }
+
+  // Advanced recommendation features
+  async getCachedRecommendations(userId: number, requestHash: string): Promise<StyleRecommendationCache | undefined> {
+    const [cached] = await db
+      .select()
+      .from(styleRecommendationCache)
+      .where(eq(styleRecommendationCache.userId, userId))
+      .where(eq(styleRecommendationCache.requestHash, requestHash))
+      .where(gt(styleRecommendationCache.expiresAt, new Date()));
+    return cached || undefined;
+  }
+
+  async cacheRecommendations(userId: number, requestHash: string, recommendations: any): Promise<StyleRecommendationCache> {
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // Cache for 24 hours
+
+    const [cached] = await db
+      .insert(styleRecommendationCache)
+      .values({
+        userId,
+        requestHash,
+        recommendations,
+        expiresAt,
+      })
+      .onConflictDoUpdate({
+        target: styleRecommendationCache.requestHash,
+        set: {
+          recommendations,
+          expiresAt,
+        },
+      })
+      .returning();
+    return cached;
+  }
+
+  async getStyleTrends(period: string = 'weekly'): Promise<StyleTrend[]> {
+    const trends = await db
+      .select()
+      .from(styleTrends)
+      .where(eq(styleTrends.period, period))
+      .orderBy(desc(styleTrends.trendingScore));
+    return trends;
+  }
+
+  async updateStyleTrends(): Promise<void> {
+    // This would typically be run as a background job
+    const now = new Date();
+    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    // Calculate trends for each art style
+    const allStyles = await this.getAllArtStyles();
+    
+    for (const style of allStyles) {
+      const recentUsage = await db
+        .select()
+        .from(userStylePreferences)
+        .where(eq(userStylePreferences.artStyleId, style.id))
+        .where(gte(userStylePreferences.lastUsed, weekStart));
+      
+      const usageCount = recentUsage.reduce((sum, pref) => sum + pref.usageCount, 0);
+      const averageRating = recentUsage
+        .filter(pref => pref.rating !== null)
+        .reduce((sum, pref, _, arr) => sum + (pref.rating || 0) / arr.length, 0);
+      
+      const trendingScore = usageCount * (averageRating || 3) * 10; // Basic trending algorithm
+      
+      await db
+        .insert(styleTrends)
+        .values({
+          artStyleId: style.id,
+          period: 'weekly',
+          usageCount,
+          averageRating: averageRating.toString(),
+          trendingScore: trendingScore.toString(),
+          periodStart: weekStart,
+          periodEnd: now,
+        })
+        .onConflictDoNothing();
+    }
+  }
+
+  async getPersonalizedStyleInsights(userId: number): Promise<any> {
+    const preferences = await this.getUserStylePreferences(userId);
+    const stats = await this.getStyleUsageStats(userId);
+    
+    // Calculate insights
+    const mostUsedStyle = stats[0];
+    const highestRatedStyles = stats.filter(s => s.rating && s.rating >= 4);
+    const recentTrends = await this.getStyleTrends('weekly');
+    
+    return {
+      totalStylesUsed: stats.length,
+      mostUsedStyle: mostUsedStyle?.styleName,
+      highestRatedStyles: highestRatedStyles.map(s => s.styleName),
+      recommendedTrendingStyles: recentTrends.slice(0, 3).map(t => ({
+        styleId: t.artStyleId,
+        trendingScore: t.trendingScore,
+      })),
+      stylePersonality: this.calculateStylePersonality(stats),
+    };
+  }
+
+  async getSimilarUsers(userId: number): Promise<Array<{ userId: number; similarity: number }>> {
+    // Simplified similarity calculation based on shared style preferences
+    const userPrefs = await this.getUserStylePreferences(userId);
+    const userStyleIds = new Set(userPrefs.map(p => p.artStyleId));
+    
+    if (userStyleIds.size === 0) return [];
+    
+    // Get other users with overlapping style preferences
+    const otherUsers = await db
+      .select({
+        userId: userStylePreferences.userId,
+        artStyleId: userStylePreferences.artStyleId,
+        rating: userStylePreferences.rating,
+      })
+      .from(userStylePreferences)
+      .where(ne(userStylePreferences.userId, userId));
+    
+    const userSimilarities = new Map<number, number>();
+    
+    for (const pref of otherUsers) {
+      if (userStyleIds.has(pref.artStyleId)) {
+        const currentSimilarity = userSimilarities.get(pref.userId) || 0;
+        userSimilarities.set(pref.userId, currentSimilarity + 1);
+      }
+    }
+    
+    return Array.from(userSimilarities.entries())
+      .map(([userId, overlap]) => ({
+        userId,
+        similarity: overlap / userStyleIds.size,
+      }))
+      .filter(u => u.similarity > 0.3)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 10);
+  }
+
+  private calculateStylePersonality(stats: Array<{ styleName: string; usageCount: number; rating?: number }>): string {
+    if (stats.length === 0) return "Explorer";
+    
+    const totalUsage = stats.reduce((sum, s) => sum + s.usageCount, 0);
+    const avgRating = stats.reduce((sum, s) => sum + (s.rating || 3), 0) / stats.length;
+    const diversity = stats.length;
+    
+    if (diversity >= 5 && avgRating >= 4) return "Creative Virtuoso";
+    if (diversity >= 4) return "Style Explorer";
+    if (avgRating >= 4.5) return "Quality Focused";
+    if (totalUsage >= 10) return "Prolific Creator";
+    return "Rising Artist";
   }
 }
 

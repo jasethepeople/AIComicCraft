@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, json, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, json, timestamp, boolean, decimal } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -269,7 +269,12 @@ export const styleRecommendationSchema = z.object({
     name: z.string(),
     description: z.string(),
   })).optional(),
-  previousStyles: z.array(z.string()).optional(), // User's previous art style preferences
+  previousStyles: z.array(z.string()).optional(),
+  colorPalette: z.enum(["bright", "muted", "dark", "pastel", "vibrant", "monochrome"]).optional(),
+  complexity: z.enum(["simple", "moderate", "detailed", "intricate"]).optional(),
+  timeOfDay: z.enum(["morning", "day", "evening", "night", "any"]).optional(),
+  setting: z.enum(["urban", "rural", "fantasy", "sci-fi", "historical", "modern", "post-apocalyptic"]).optional(),
+  inspirationImages: z.array(z.string()).optional(), // URLs to reference images
 });
 
 export type StyleRecommendationRequest = z.infer<typeof styleRecommendationSchema>;
@@ -282,6 +287,31 @@ export const userStylePreferences = pgTable("user_style_preferences", {
   usageCount: integer("usage_count").default(1).notNull(),
   lastUsed: timestamp("last_used").defaultNow().notNull(),
   rating: integer("rating"), // 1-5 stars, optional user rating
+  contextTags: text("context_tags").array(), // Tags for when this style was used
+  projectType: text("project_type"), // Type of project where this style was used
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Style recommendation cache to improve performance
+export const styleRecommendationCache = pgTable("style_recommendation_cache", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  requestHash: text("request_hash").notNull().unique(), // Hash of the request parameters
+  recommendations: json("recommendations").notNull(), // Cached recommendations
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Style trend tracking
+export const styleTrends = pgTable("style_trends", {
+  id: serial("id").primaryKey(),
+  artStyleId: integer("art_style_id").notNull(),
+  period: text("period").notNull(), // 'daily', 'weekly', 'monthly'
+  usageCount: integer("usage_count").default(0).notNull(),
+  averageRating: decimal("average_rating", { precision: 3, scale: 2 }),
+  trendingScore: decimal("trending_score", { precision: 5, scale: 2 }),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -294,6 +324,29 @@ export const insertUserStylePreferenceSchema = createInsertSchema(userStylePrefe
 
 export type UserStylePreference = typeof userStylePreferences.$inferSelect;
 export type InsertUserStylePreference = z.infer<typeof insertUserStylePreferenceSchema>;
+
+export const insertStyleRecommendationCacheSchema = createInsertSchema(styleRecommendationCache).pick({
+  userId: true,
+  requestHash: true,
+  recommendations: true,
+  expiresAt: true,
+});
+
+export type StyleRecommendationCache = typeof styleRecommendationCache.$inferSelect;
+export type InsertStyleRecommendationCache = z.infer<typeof insertStyleRecommendationCacheSchema>;
+
+export const insertStyleTrendSchema = createInsertSchema(styleTrends).pick({
+  artStyleId: true,
+  period: true,
+  usageCount: true,
+  averageRating: true,
+  trendingScore: true,
+  periodStart: true,
+  periodEnd: true,
+});
+
+export type StyleTrend = typeof styleTrends.$inferSelect;
+export type InsertStyleTrend = z.infer<typeof insertStyleTrendSchema>;
 
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -330,6 +383,20 @@ export const userStylePreferencesRelations = relations(userStylePreferences, ({ 
   }),
   artStyle: one(artStyles, {
     fields: [userStylePreferences.artStyleId],
+    references: [artStyles.id],
+  }),
+}));
+
+export const styleRecommendationCacheRelations = relations(styleRecommendationCache, ({ one }) => ({
+  user: one(users, {
+    fields: [styleRecommendationCache.userId],
+    references: [users.id],
+  }),
+}));
+
+export const styleTrendsRelations = relations(styleTrends, ({ one }) => ({
+  artStyle: one(artStyles, {
+    fields: [styleTrends.artStyleId],
     references: [artStyles.id],
   }),
 }));

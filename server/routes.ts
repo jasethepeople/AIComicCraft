@@ -18,6 +18,7 @@ import openai from "./openai";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import Stripe from "stripe";
+import crypto from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Stripe
@@ -852,6 +853,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const recommendationRequest = styleRecommendationSchema.parse(req.body);
       
+      // Create request hash for caching
+      const requestHash = crypto.createHash('md5').update(JSON.stringify(recommendationRequest)).digest('hex');
+      
+      // Check cache first
+      const cached = await storage.getCachedRecommendations(req.session.userId!, requestHash);
+      if (cached) {
+        return res.json(cached.recommendations);
+      }
+      
       // Get all available art styles
       const availableStyles = await storage.getAllArtStyles();
       
@@ -864,6 +874,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         availableStyles,
         userPreferences
       );
+      
+      // Cache the recommendations
+      await storage.cacheRecommendations(req.session.userId!, requestHash, recommendations);
       
       res.json({ recommendations });
     } catch (err) {
@@ -913,13 +926,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get style trends
+  app.get("/api/styles/trends", async (req, res) => {
+    try {
+      const period = req.query.period as string || 'weekly';
+      const trends = await storage.getStyleTrends(period);
+      
+      res.json({ trends });
+    } catch (err) {
+      console.error("Error fetching style trends:", err);
+      res.status(500).json({ message: "Failed to fetch style trends" });
+    }
+  });
+
+  // Get personalized style insights
+  app.get("/api/styles/insights", authenticate, async (req, res) => {
+    try {
+      const insights = await storage.getPersonalizedStyleInsights(req.session.userId!);
+      
+      res.json(insights);
+    } catch (err) {
+      console.error("Error fetching style insights:", err);
+      res.status(500).json({ message: "Failed to fetch style insights" });
+    }
+  });
+
+  // Get similar users for collaborative filtering
+  app.get("/api/styles/similar-users", authenticate, async (req, res) => {
+    try {
+      const similarUsers = await storage.getSimilarUsers(req.session.userId!);
+      
+      res.json({ similarUsers });
+    } catch (err) {
+      console.error("Error fetching similar users:", err);
+      res.status(500).json({ message: "Failed to fetch similar users" });
+    }
+  });
+
+  // Update style trends (admin only)
+  app.post("/api/styles/update-trends", authenticate, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      await storage.updateStyleTrends();
+      
+      res.json({ message: "Style trends updated successfully" });
+    } catch (err) {
+      console.error("Error updating style trends:", err);
+      res.status(500).json({ message: "Failed to update style trends" });
+    }
+  });
+
   // Helper function to record style usage for recommendations
   const recordStyleUsage = async (userId: number, styleName: string): Promise<void> => {
     try {
       const allStyles = await storage.getAllArtStyles();
       const style = allStyles.find(s => s.name.toLowerCase() === styleName.toLowerCase());
       if (style) {
-        await storage.recordStyleUsage(userId, style.id);
+        await storage.recordStyleUsage(userId, style.id, ['comic-creation'], 'comic');
       }
     } catch (error) {
       console.error("Error recording style usage:", error);
