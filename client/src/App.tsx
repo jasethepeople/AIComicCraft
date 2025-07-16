@@ -8,6 +8,7 @@ import Header from "@/components/header";
 import Footer from "@/components/footer";
 import Home from "@/pages/home";
 import CreatorStudio from "@/pages/creator-studio";
+import AnimeStudio from "@/pages/anime-studio";
 import Marketplace from "@/pages/marketplace";
 import PreviewComic from "@/pages/preview-comic";
 import Register from "@/pages/register";
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/creator-studio" component={CreatorStudio} />
       <Route path="/creator-studio/:id" component={CreatorStudio} />
+      <Route path="/anime-studio" component={AnimeStudio} />
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/preview-comic/:id" component={PreviewComic} />
       <Route path="/register" component={Register} />

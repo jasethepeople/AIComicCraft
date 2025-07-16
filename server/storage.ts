@@ -1,9 +1,12 @@
 import { 
-  User, InsertUser, 
-  Comic, InsertComic, 
-  Panel, InsertPanel, 
-  ArtStyle, InsertArtStyle 
+  users, comics, panels, artStyles,
+  type User, type InsertUser, 
+  type Comic, type InsertComic, 
+  type Panel, type InsertPanel, 
+  type ArtStyle, type InsertArtStyle 
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -226,4 +229,120 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage implementation
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getComic(id: number): Promise<Comic | undefined> {
+    const [comic] = await db.select().from(comics).where(eq(comics.id, id));
+    return comic || undefined;
+  }
+
+  async getComicsByUser(userId: number): Promise<Comic[]> {
+    return await db.select().from(comics).where(eq(comics.userId, userId));
+  }
+
+  async getPublishedComics(): Promise<Comic[]> {
+    return await db.select().from(comics).where(eq(comics.isPublished, true));
+  }
+
+  async createComic(insertComic: InsertComic): Promise<Comic> {
+    const [comic] = await db
+      .insert(comics)
+      .values(insertComic)
+      .returning();
+    return comic;
+  }
+
+  async updateComic(id: number, comicData: Partial<InsertComic>): Promise<Comic | undefined> {
+    const [updatedComic] = await db
+      .update(comics)
+      .set({ ...comicData, updatedAt: new Date() })
+      .where(eq(comics.id, id))
+      .returning();
+    return updatedComic || undefined;
+  }
+
+  async deleteComic(id: number): Promise<boolean> {
+    // First delete all panels associated with this comic
+    await db.delete(panels).where(eq(panels.comicId, id));
+    // Then delete the comic
+    const result = await db.delete(comics).where(eq(comics.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getPanel(id: number): Promise<Panel | undefined> {
+    const [panel] = await db.select().from(panels).where(eq(panels.id, id));
+    return panel || undefined;
+  }
+
+  async getPanelsByComic(comicId: number): Promise<Panel[]> {
+    return await db
+      .select()
+      .from(panels)
+      .where(eq(panels.comicId, comicId))
+      .orderBy(panels.sequence);
+  }
+
+  async createPanel(insertPanel: InsertPanel): Promise<Panel> {
+    const [panel] = await db
+      .insert(panels)
+      .values(insertPanel)
+      .returning();
+    return panel;
+  }
+
+  async updatePanel(id: number, panelData: Partial<InsertPanel>): Promise<Panel | undefined> {
+    const [updatedPanel] = await db
+      .update(panels)
+      .set(panelData)
+      .where(eq(panels.id, id))
+      .returning();
+    return updatedPanel || undefined;
+  }
+
+  async deletePanel(id: number): Promise<boolean> {
+    const result = await db.delete(panels).where(eq(panels.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getAllArtStyles(): Promise<ArtStyle[]> {
+    return await db.select().from(artStyles);
+  }
+
+  async getArtStyle(id: number): Promise<ArtStyle | undefined> {
+    const [artStyle] = await db.select().from(artStyles).where(eq(artStyles.id, id));
+    return artStyle || undefined;
+  }
+
+  async createArtStyle(insertArtStyle: InsertArtStyle): Promise<ArtStyle> {
+    const [artStyle] = await db
+      .insert(artStyles)
+      .values(insertArtStyle)
+      .returning();
+    return artStyle;
+  }
+}
+
+export const storage = new DatabaseStorage();

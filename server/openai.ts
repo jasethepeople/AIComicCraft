@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { ComicGenerationRequest, PanelGenerationRequest } from "@shared/schema";
+import { ComicGenerationRequest, PanelGenerationRequest, AnimeGenerationRequest } from "@shared/schema";
 
 // Initialize OpenAI with API key from environment variables
 const openai = new OpenAI({ 
@@ -126,8 +126,156 @@ export async function generateCharacterDetails(
   }
 }
 
+/**
+ * Generate a complete anime with multiple scenes and frames
+ */
+export async function generateAnime(
+  request: AnimeGenerationRequest
+): Promise<{
+  description: string;
+  coverImage: string;
+  frames: Array<{
+    imageUrl: string;
+    videoUrl?: string;
+    animationData?: any;
+    duration: number;
+    characters: any[];
+    dialogues: any[];
+    voiceOvers: any[];
+    type: string;
+  }>;
+}> {
+  try {
+    // Generate anime description and storyboard
+    const storyboardPrompt = `Create a detailed anime storyboard based on:
+    Title: ${request.title}
+    Description: ${request.description || ''}
+    Art Style: ${request.artStyle}
+    Animation Style: ${request.animationStyle}
+    Duration: ${request.duration} seconds
+    Characters: ${request.characters.map(c => `${c.name} (${c.description}, voice: ${c.voiceType})`).join(', ')}
+    Scenes: ${request.scenes.map((s, i) => `Scene ${i+1}: ${s.description} (${s.duration}s)`).join('; ')}
+    Music Style: ${request.musicStyle}
+    Story Prompt: ${request.prompt}
+    
+    Provide a JSON response with:
+    {
+      "description": "Detailed anime description",
+      "coverImagePrompt": "DALL-E prompt for cover image",
+      "framePrompts": ["frame1 prompt", "frame2 prompt", ...]
+    }`;
+
+    const storyboardResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: storyboardPrompt }],
+      response_format: { type: "json_object" }
+    });
+
+    const storyboard = JSON.parse(storyboardResponse.choices[0].message.content || "{}");
+
+    // Generate cover image
+    const coverResponse = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: `${request.artStyle} anime style cover art: ${storyboard.coverImagePrompt}`,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+
+    // Generate frames for each scene
+    const frames = [];
+    let frameIndex = 0;
+
+    for (const scene of request.scenes) {
+      const framesPerSecond = request.frameRate / request.frameRate; // Simplified for now
+      const sceneFrames = Math.ceil(scene.duration * framesPerSecond);
+
+      for (let i = 0; i < sceneFrames; i++) {
+        const framePrompt = `${request.artStyle} ${request.animationStyle} anime frame: ${scene.description}. Frame ${i+1} of ${sceneFrames} for this scene.`;
+        
+        const frameResponse = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: framePrompt,
+          n: 1,
+          size: "1024x1024",
+          quality: "standard",
+        });
+
+        frames.push({
+          imageUrl: frameResponse.data[0].url,
+          videoUrl: undefined, // Could be enhanced with video generation
+          animationData: {
+            sceneIndex: request.scenes.indexOf(scene),
+            frameInScene: i,
+            totalFramesInScene: sceneFrames,
+            cameraMovement: scene.cameraMovement,
+            effects: scene.effects || []
+          },
+          duration: (scene.duration / sceneFrames) * 1000, // Convert to milliseconds
+          characters: request.characters,
+          dialogues: scene.dialogues || [],
+          voiceOvers: [], // Could be enhanced with voice generation
+          type: i === 0 ? "scene_start" : i === sceneFrames - 1 ? "scene_end" : "animated"
+        });
+
+        frameIndex++;
+      }
+    }
+
+    return {
+      description: storyboard.description,
+      coverImage: coverResponse.data[0].url,
+      frames
+    };
+  } catch (error) {
+    console.error("Error generating anime:", error);
+    throw new Error(`Failed to generate anime: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Generate a single anime frame
+ */
+export async function generateAnimeFrame(
+  frameRequest: any
+): Promise<{
+  imageUrl: string;
+  videoUrl?: string;
+  animationData?: any;
+  voiceOvers?: any[];
+}> {
+  try {
+    const prompt = `${frameRequest.artStyle} ${frameRequest.animationStyle} anime frame: ${frameRequest.description}. 
+    Characters: ${frameRequest.characters.map((c: any) => `${c.name} (${c.description})`).join(', ')}.
+    Type: ${frameRequest.frameType}`;
+
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+
+    return {
+      imageUrl: response.data[0].url,
+      videoUrl: undefined, // Could be enhanced with video generation
+      animationData: {
+        frameType: frameRequest.frameType,
+        duration: frameRequest.duration
+      },
+      voiceOvers: [] // Could be enhanced with voice generation
+    };
+  } catch (error) {
+    console.error("Error generating anime frame:", error);
+    throw new Error(`Failed to generate anime frame: ${(error as Error).message}`);
+  }
+}
+
 export default {
   generateComicPanel,
   generateStoryOutline,
-  generateCharacterDetails
+  generateCharacterDetails,
+  generateAnime,
+  generateAnimeFrame
 };

@@ -6,7 +6,8 @@ import {
   insertComicSchema, 
   insertPanelSchema,
   comicGenerationSchema,
-  panelGenerationSchema
+  panelGenerationSchema,
+  animeGenerationSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -442,6 +443,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error generating character details:", err);
       res.status(500).json({ message: "Failed to generate character details" });
+    }
+  });
+
+  // Anime generation routes
+  app.post("/api/generate/anime", authenticate, async (req, res) => {
+    try {
+      const animeRequest = animeGenerationSchema.parse(req.body);
+      
+      // Generate anime using OpenAI
+      const animeResult = await openai.generateAnime(animeRequest);
+      
+      // Create a new anime comic
+      const comic = await storage.createComic({
+        title: animeRequest.title,
+        description: animeRequest.description || animeResult.description,
+        userId: req.session.userId!,
+        artStyle: animeRequest.artStyle,
+        contentType: "anime",
+        animationStyle: animeRequest.animationStyle,
+        frameRate: animeRequest.frameRate,
+        duration: animeRequest.duration,
+        coverImage: animeResult.coverImage || "",
+        price: "",
+        isPublished: false,
+        isForSale: false,
+      });
+      
+      // Create panels/frames from scenes
+      const panelPromises = animeResult.frames.map(async (frame, index) => {
+        return storage.createPanel({
+          comicId: comic.id,
+          sequence: index + 1,
+          imageUrl: frame.imageUrl,
+          videoUrl: frame.videoUrl,
+          animationData: frame.animationData,
+          duration: frame.duration,
+          characters: frame.characters,
+          dialogues: frame.dialogues,
+          voiceOvers: frame.voiceOvers,
+          layout: "anime",
+          panelType: frame.type,
+        });
+      });
+      
+      const panels = await Promise.all(panelPromises);
+      
+      res.status(201).json({
+        comicId: comic.id,
+        title: comic.title,
+        description: comic.description,
+        contentType: "anime",
+        frameCount: panels.length,
+        duration: animeRequest.duration,
+        panels: panels.map(panel => ({
+          id: panel.id,
+          sequence: panel.sequence,
+          imageUrl: panel.imageUrl,
+          videoUrl: panel.videoUrl,
+          duration: panel.duration,
+          panelType: panel.panelType
+        }))
+      });
+    } catch (err) {
+      if (err instanceof ZodError) {
+        const validationError = fromZodError(err);
+        return res.status(400).json({ message: validationError.message });
+      }
+      
+      console.error("Error generating anime:", err);
+      res.status(500).json({ message: "Failed to generate anime" });
+    }
+  });
+
+  app.post("/api/generate/anime-frame", authenticate, async (req, res) => {
+    try {
+      const frameRequest = {
+        comicId: req.body.comicId,
+        sequence: req.body.sequence,
+        description: req.body.description,
+        artStyle: req.body.artStyle,
+        animationStyle: req.body.animationStyle,
+        characters: req.body.characters,
+        dialogues: req.body.dialogues,
+        duration: req.body.duration || 1000,
+        frameType: req.body.frameType || "static"
+      };
+      
+      // Verify that comic exists and user owns it
+      const comic = await storage.getComic(frameRequest.comicId);
+      if (!comic) {
+        return res.status(404).json({ message: "Comic not found" });
+      }
+      
+      if (comic.userId !== req.session.userId) {
+        return res.status(403).json({ message: "Unauthorized to generate frames for this anime" });
+      }
+      
+      // Generate anime frame
+      const frameResult = await openai.generateAnimeFrame(frameRequest);
+      
+      // Check if panel exists
+      const existingPanels = await storage.getPanelsByComic(frameRequest.comicId);
+      const panelExists = existingPanels.some(p => p.sequence === frameRequest.sequence);
+      
+      let panel;
+      if (panelExists) {
+        // Update existing panel
+        const existingPanel = existingPanels.find(p => p.sequence === frameRequest.sequence);
+        panel = await storage.updatePanel(existingPanel!.id, {
+          imageUrl: frameResult.imageUrl,
+          videoUrl: frameResult.videoUrl,
+          animationData: frameResult.animationData,
+          duration: frameRequest.duration,
+          characters: frameRequest.characters,
+          dialogues: frameRequest.dialogues,
+          voiceOvers: frameResult.voiceOvers,
+          panelType: frameRequest.frameType
+        });
+      } else {
+        // Create new panel
+        panel = await storage.createPanel({
+          comicId: frameRequest.comicId,
+          sequence: frameRequest.sequence,
+          imageUrl: frameResult.imageUrl,
+          videoUrl: frameResult.videoUrl,
+          animationData: frameResult.animationData,
+          duration: frameRequest.duration,
+          characters: frameRequest.characters,
+          dialogues: frameRequest.dialogues,
+          voiceOvers: frameResult.voiceOvers,
+          layout: "anime",
+          panelType: frameRequest.frameType
+        });
+      }
+      
+      res.json(panel);
+    } catch (err) {
+      console.error("Error generating anime frame:", err);
+      res.status(500).json({ message: "Failed to generate anime frame" });
     }
   });
 

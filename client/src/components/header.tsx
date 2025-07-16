@@ -66,7 +66,8 @@ export default function Header() {
 
         <nav className="hidden md:flex items-center space-x-6">
           <NavLink href="/">Home</NavLink>
-          <NavLink href="/creator-studio">Create</NavLink>
+          <NavLink href="/creator-studio">Comics</NavLink>
+          <NavLink href="/anime-studio">Anime</NavLink>
           <NavLink href="/marketplace">Marketplace</NavLink>
           <NavLink href="/community">Community</NavLink>
           <NavLink href="/learn">Learn</NavLink>
@@ -136,7 +137,10 @@ export default function Header() {
               <a className="text-white hover:text-secondary transition-colors">Home</a>
             </Link>
             <Link href="/creator-studio">
-              <a className="text-white hover:text-secondary transition-colors">Create</a>
+              <a className="text-white hover:text-secondary transition-colors">Comics</a>
+            </Link>
+            <Link href="/anime-studio">
+              <a className="text-white hover:text-secondary transition-colors">Anime</a>
             </Link>
             <Link href="/marketplace">
               <a className="text-white hover:text-secondary transition-colors">Marketplace</a>
