@@ -31,33 +31,33 @@ export default function Footer() {
           <div>
             <h3 className="font-bold text-lg mb-4">Product</h3>
             <ul className="space-y-2">
-              <li><Link href="/features"><a className="text-gray-400 hover:text-white transition-colors">Features</a></Link></li>
-              <li><Link href="/pricing"><a className="text-gray-400 hover:text-white transition-colors">Pricing</a></Link></li>
-              <li><Link href="/marketplace"><a className="text-gray-400 hover:text-white transition-colors">Marketplace</a></Link></li>
-              <li><Link href="/nft"><a className="text-gray-400 hover:text-white transition-colors">NFT Integration</a></Link></li>
-              <li><Link href="/api"><a className="text-gray-400 hover:text-white transition-colors">API</a></Link></li>
+              <li><Link href="/features"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Features</span></Link></li>
+              <li><Link href="/pricing"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Pricing</span></Link></li>
+              <li><Link href="/marketplace"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Marketplace</span></Link></li>
+              <li><Link href="/nft"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">NFT Integration</span></Link></li>
+              <li><Link href="/api"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">API</span></Link></li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-bold text-lg mb-4">Resources</h3>
             <ul className="space-y-2">
-              <li><Link href="/blog"><a className="text-gray-400 hover:text-white transition-colors">Blog</a></Link></li>
-              <li><Link href="/tutorials"><a className="text-gray-400 hover:text-white transition-colors">Tutorials</a></Link></li>
-              <li><Link href="/documentation"><a className="text-gray-400 hover:text-white transition-colors">Documentation</a></Link></li>
-              <li><Link href="/community"><a className="text-gray-400 hover:text-white transition-colors">Community</a></Link></li>
-              <li><Link href="/support"><a className="text-gray-400 hover:text-white transition-colors">Support</a></Link></li>
+              <li><Link href="/blog"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Blog</span></Link></li>
+              <li><Link href="/tutorials"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Tutorials</span></Link></li>
+              <li><Link href="/documentation"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Documentation</span></Link></li>
+              <li><Link href="/community"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Community</span></Link></li>
+              <li><Link href="/support"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Support</span></Link></li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-bold text-lg mb-4">Company</h3>
             <ul className="space-y-2">
-              <li><Link href="/about"><a className="text-gray-400 hover:text-white transition-colors">About Us</a></Link></li>
-              <li><Link href="/careers"><a className="text-gray-400 hover:text-white transition-colors">Careers</a></Link></li>
-              <li><Link href="/privacy"><a className="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></Link></li>
-              <li><Link href="/terms"><a className="text-gray-400 hover:text-white transition-colors">Terms of Service</a></Link></li>
-              <li><Link href="/contact"><a className="text-gray-400 hover:text-white transition-colors">Contact</a></Link></li>
+              <li><Link href="/about"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">About Us</span></Link></li>
+              <li><Link href="/careers"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Careers</span></Link></li>
+              <li><Link href="/privacy"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Privacy Policy</span></Link></li>
+              <li><Link href="/terms"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Terms of Service</span></Link></li>
+              <li><Link href="/contact"><span className="text-gray-400 hover:text-white transition-colors cursor-pointer">Contact</span></Link></li>
             </ul>
           </div>
         </div>

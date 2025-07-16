@@ -50,9 +50,9 @@ export default function Header() {
     
     return (
       <Link href={href}>
-        <a className={`text-white hover:text-secondary transition-colors ${isActive ? 'text-secondary' : ''}`}>
+        <span className={`text-white hover:text-secondary transition-colors cursor-pointer ${isActive ? 'text-secondary' : ''}`}>
           {children}
-        </a>
+        </span>
       </Link>
     );
   };
@@ -62,10 +62,10 @@ export default function Header() {
       <div className="container mx-auto flex justify-between items-center px-4 py-3">
         <div className="flex items-center">
           <Link href="/">
-            <a className="text-3xl font-bangers tracking-wider mr-2">
+            <span className="text-3xl font-bangers tracking-wider mr-2 cursor-pointer">
               <span className="text-primary">Comic</span>
               <span className="text-secondary">AI</span>
-            </a>
+            </span>
           </Link>
           <span className="hidden md:inline text-sm bg-accent text-white px-2 py-1 rounded-full">
             BETA
