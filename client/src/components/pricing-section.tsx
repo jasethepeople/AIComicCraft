@@ -48,6 +48,22 @@ export default function PricingSection() {
       buttonText: "Choose Pro",
       buttonLink: "/register?plan=pro",
       popular: false
+    },
+    {
+      name: "Lifetime",
+      description: "One-time payment, lifetime access",
+      price: 99.99,
+      features: [
+        "2000 credits per month",
+        "All Pro features",
+        "Lifetime access",
+        "No monthly fees",
+        "Exclusive content",
+        "Early access to new features"
+      ],
+      buttonText: "Get Lifetime",
+      buttonLink: "/register?plan=lifetime",
+      popular: false
     }
   ];
 
@@ -61,7 +77,7 @@ export default function PricingSection() {
           Choose the plan that works for your creative goals, from casual hobbyists to professional creators.
         </p>
         
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {plans.map((plan, index) => (
             <div 
               key={index} 
@@ -80,7 +96,7 @@ export default function PricingSection() {
                 <p className="text-gray-600 mb-4">{plan.description}</p>
                 <div className="mb-6">
                   <span className="text-4xl font-bold">${plan.price}</span>
-                  <span className="text-gray-500">/month</span>
+                  <span className="text-gray-500">{plan.name === "Lifetime" ? " one-time" : "/month"}</span>
                 </div>
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature, i) => (

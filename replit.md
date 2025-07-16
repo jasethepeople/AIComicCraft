@@ -2,11 +2,20 @@
 
 ## Overview
 
-ComicAI is a web application that allows users to create, share, and sell AI-generated comics. The platform uses OpenAI's image generation capabilities to transform text descriptions into comic panels. Users can customize characters, storylines, and art styles to create unique comics.
+ComicAI is a comprehensive AI-powered digital comic and anime creation platform with integrated monetization system featuring attractively low pricing ($2.99 Basic, $7.99 Pro, $99.99 Lifetime). The platform uses OpenAI's image generation capabilities and includes credit-based compensation model, personalized onboarding wizard, and social media preview generator targeting hobbyists, educators, and professional creators.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Recent Changes (December 2024)
+
+- Implemented attractively low pricing structure with credit-based compensation
+- Added personalized onboarding wizard (6-step guided setup)
+- Created social media preview generator with multi-platform support
+- Updated Stripe integration with live API keys for payment processing
+- Integrated comprehensive credit management system with deduction protection
+- Added attribution: "Made with ❤️ by Jason Clark (jason-clark.org) © 2025"
 
 ## System Architecture
 

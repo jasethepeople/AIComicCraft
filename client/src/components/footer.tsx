@@ -63,7 +63,10 @@ export default function Footer() {
         </div>
         
         <div className="border-t border-gray-700 mt-12 pt-8 text-center text-gray-500 text-sm">
-          <p>© {new Date().getFullYear()} ComicAI. All rights reserved. AI-generated content subject to our terms of service.</p>
+          <p className="mb-2">© {new Date().getFullYear()} ComicAI. All rights reserved. AI-generated content subject to our terms of service.</p>
+          <p className="text-gray-400">
+            Made with ❤️ by <a href="https://jason-clark.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 transition-colors">Jason Clark</a>
+          </p>
         </div>
       </div>
     </footer>
