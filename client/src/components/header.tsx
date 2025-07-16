@@ -80,6 +80,7 @@ export default function Header() {
           <NavLink href="/social-preview">Social</NavLink>
           <NavLink href="/community">Community</NavLink>
           <NavLink href="/learn">Learn</NavLink>
+          <NavLink href="/tutorials">Tutorials</NavLink>
         </nav>
 
         <div className="flex items-center space-x-4">
