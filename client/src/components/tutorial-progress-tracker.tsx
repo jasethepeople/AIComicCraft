@@ -22,7 +22,7 @@ const achievements = [
 export default function TutorialProgressTracker() {
   const [progress, setProgress] = useState<TutorialProgress>({
     completed: [],
-    totalTutorials: 4,
+    totalTutorials: 8,
     skillLevel: "Beginner",
     achievementsBadges: []
   });
@@ -49,8 +49,8 @@ export default function TutorialProgressTracker() {
   const completionPercentage = (progress.completed.length / progress.totalTutorials) * 100;
 
   const getSkillLevel = (completedCount: number): "Beginner" | "Intermediate" | "Advanced" => {
-    if (completedCount >= 4) return "Advanced";
-    if (completedCount >= 2) return "Intermediate";
+    if (completedCount >= 6) return "Advanced";
+    if (completedCount >= 3) return "Intermediate";
     return "Beginner";
   };
 
@@ -58,9 +58,9 @@ export default function TutorialProgressTracker() {
     const badges = [];
     
     if (completedCount >= 1) badges.push("first_tutorial");
-    if (completedCount >= 3) badges.push("style_explorer");
-    if (completed.includes("superhero") && completed.includes("manga")) badges.push("dedicated_learner");
-    if (completedCount >= 4) badges.push("art_master");
+    if (completedCount >= 4) badges.push("style_explorer");
+    if (completed.includes("superhero") && completed.includes("manga") && completed.includes("retro")) badges.push("dedicated_learner");
+    if (completedCount >= 8) badges.push("art_master");
     
     return badges;
   };

@@ -6,8 +6,10 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
-import { PlayCircle, BookOpen, Award, CheckCircle, ArrowRight, Palette, Eye, Lightbulb, Trophy } from "lucide-react";
+import { PlayCircle, BookOpen, Award, CheckCircle, ArrowRight, Palette, Eye, Lightbulb, Trophy, Brain } from "lucide-react";
 import TutorialProgressTracker, { useTutorialProgress } from "@/components/tutorial-progress-tracker";
+import TutorialQuiz from "@/components/tutorial-quiz";
+import TutorialCertificate from "@/components/tutorial-certificate";
 
 interface Tutorial {
   id: string;
@@ -145,6 +147,126 @@ const tutorials: Tutorial[] = [
       "Balance realism with stylization"
     ],
     colorPalettes: ["Realistic Tones", "Atmospheric", "Rich Textures"]
+  },
+  {
+    id: "retro",
+    title: "Retro Comic Style",
+    description: "Embrace the vintage charm of classic comic aesthetics",
+    duration: "9 min",
+    difficulty: "Beginner",
+    styleId: 5,
+    styleName: "Retro",
+    keyCharacteristics: [
+      "Ben-day dots and halftone patterns",
+      "Limited color palettes with vintage appeal",
+      "Clean, bold line work",
+      "Classic speech bubbles and sound effects",
+      "Nostalgic character designs"
+    ],
+    historicalContext: "Retro comics draw inspiration from the golden age of comics (1930s-1950s), featuring the printing techniques and aesthetic choices of that era.",
+    famousExamples: [
+      "Classic Superman comics",
+      "Golden Age Batman",
+      "Captain America by Jack Kirby",
+      "Wonder Woman by Harry G. Peter"
+    ],
+    technicalTips: [
+      "Use ben-day dots for shading effects",
+      "Stick to 3-4 color palettes",
+      "Employ thick, confident outlines",
+      "Create classic comic book lettering"
+    ],
+    colorPalettes: ["Vintage Primary", "Sepia Tones", "Classic Comics"]
+  },
+  {
+    id: "webcomic",
+    title: "Webcomic Style",
+    description: "Modern digital comic techniques for online publishing",
+    duration: "11 min",
+    difficulty: "Intermediate",
+    styleId: 6,
+    styleName: "Webcomic",
+    keyCharacteristics: [
+      "Optimized for digital reading",
+      "Vertical scroll-friendly layouts",
+      "Bright, screen-friendly colors",
+      "Simplified character designs for consistency",
+      "Interactive elements and multimedia integration"
+    ],
+    historicalContext: "Webcomics emerged with the internet age, allowing creators to publish directly online with formats optimized for digital consumption.",
+    famousExamples: [
+      "Homestuck by Andrew Hussie",
+      "Questionable Content by Jeph Jacques",
+      "Girl Genius by Phil and Kaja Foglio",
+      "Penny Arcade by Mike Krahulik"
+    ],
+    technicalTips: [
+      "Design for mobile and desktop viewing",
+      "Use consistent character models",
+      "Optimize file sizes for web",
+      "Consider vertical scrolling formats"
+    ],
+    colorPalettes: ["Digital Bright", "Screen Safe", "RGB Optimized"]
+  },
+  {
+    id: "noir",
+    title: "Noir Comic Style",
+    description: "Master the dark, atmospheric world of noir comics",
+    duration: "13 min",
+    difficulty: "Advanced",
+    styleId: 7,
+    styleName: "Noir",
+    keyCharacteristics: [
+      "High contrast black and white imagery",
+      "Dramatic lighting and deep shadows",
+      "Urban, gritty environments",
+      "Film noir inspired compositions",
+      "Moody, atmospheric storytelling"
+    ],
+    historicalContext: "Noir comics draw from film noir tradition, emphasizing moral ambiguity, urban decay, and dramatic chiaroscuro lighting techniques.",
+    famousExamples: [
+      "Sin City by Frank Miller",
+      "Batman: Year One by David Mazzucchelli",
+      "Criminal by Sean Phillips",
+      "100 Bullets by Eduardo Risso"
+    ],
+    technicalTips: [
+      "Master dramatic lighting techniques",
+      "Use strong contrast for mood",
+      "Focus on atmospheric backgrounds",
+      "Employ cinematic panel compositions"
+    ],
+    colorPalettes: ["High Contrast B&W", "Limited Noir", "Urban Shadows"]
+  },
+  {
+    id: "cartoon",
+    title: "Cartoon Comic Style",
+    description: "Learn expressive, family-friendly cartoon aesthetics",
+    duration: "7 min",
+    difficulty: "Beginner",
+    styleId: 8,
+    styleName: "Cartoon",
+    keyCharacteristics: [
+      "Simplified, exaggerated character designs",
+      "Bright, cheerful color schemes",
+      "Expressive facial features",
+      "Clear, readable layouts",
+      "Family-friendly visual language"
+    ],
+    historicalContext: "Cartoon comics evolved from newspaper strips and animated cartoons, emphasizing accessibility and broad appeal across age groups.",
+    famousExamples: [
+      "Peanuts by Charles M. Schulz",
+      "Calvin and Hobbes by Bill Watterson",
+      "Garfield by Jim Davis",
+      "Adventure Time comics"
+    ],
+    technicalTips: [
+      "Simplify character designs for consistency",
+      "Use bright, appealing colors",
+      "Focus on clear expressions",
+      "Keep layouts clean and readable"
+    ],
+    colorPalettes: ["Bright Primary", "Pastel Friendly", "Cheerful Tones"]
   }
 ];
 
@@ -183,6 +305,117 @@ export default function Tutorials() {
   };
 
   const TutorialDialog = ({ tutorial }: { tutorial: Tutorial }) => {
+    const [showQuiz, setShowQuiz] = useState(false);
+    const [quizCompleted, setQuizCompleted] = useState(false);
+    const [quizScore, setQuizScore] = useState(0);
+    const [showCertificate, setShowCertificate] = useState(false);
+
+    const handleQuizComplete = (score: number) => {
+      setQuizScore(score);
+      setQuizCompleted(true);
+      // If quiz score is good, mark tutorial as complete
+      if (score >= 2) {
+        markComplete(tutorial.id);
+        setShowCertificate(true);
+      }
+    };
+
+    const handleCertificateDownload = () => {
+      // In a real app, this would generate and download a PDF certificate
+      alert("Certificate download would be implemented here!");
+    };
+
+    const handleCertificateShare = () => {
+      // In a real app, this would share to social media
+      if (navigator.share) {
+        navigator.share({
+          title: `I completed the ${tutorial.styleName} Comic Art Style Tutorial!`,
+          text: `Just earned my certificate in ${tutorial.styleName} comic art style from ComicAI!`,
+          url: window.location.href,
+        });
+      } else {
+        alert("Social sharing would be implemented here!");
+      }
+    };
+
+    if (showQuiz) {
+      return (
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5" />
+              Test Your Knowledge
+            </DialogTitle>
+            <DialogDescription>
+              Complete this quiz to test your understanding of {tutorial.styleName} style
+            </DialogDescription>
+          </DialogHeader>
+          
+          <TutorialQuiz 
+            styleId={tutorial.id}
+            styleName={tutorial.styleName}
+            onComplete={handleQuizComplete}
+          />
+          
+          {quizCompleted && (
+            <div className="flex justify-between mt-4">
+              <Button variant="outline" onClick={() => setShowQuiz(false)}>
+                Back to Tutorial
+              </Button>
+              <div className="flex gap-2">
+                {quizScore >= 2 && (
+                  <Button onClick={() => setShowCertificate(true)}>
+                    View Certificate
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setCurrentStep(0)}>
+                  Review Tutorial
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      );
+    }
+
+    if (showCertificate) {
+      return (
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5" />
+              Congratulations!
+            </DialogTitle>
+            <DialogDescription>
+              You've successfully mastered the {tutorial.styleName} comic art style
+            </DialogDescription>
+          </DialogHeader>
+          
+          <TutorialCertificate
+            styleName={tutorial.styleName}
+            userName="Comic Artist" // In a real app, this would be the user's name
+            completionDate={new Date().toLocaleDateString()}
+            quizScore={quizScore}
+            onDownload={handleCertificateDownload}
+            onShare={handleCertificateShare}
+          />
+          
+          <div className="flex justify-between mt-4">
+            <Button variant="outline" onClick={() => setShowCertificate(false)}>
+              Back to Quiz
+            </Button>
+            <Button onClick={() => {
+              setShowCertificate(false);
+              setShowQuiz(false);
+              setCurrentStep(0);
+            }}>
+              Start New Tutorial
+            </Button>
+          </div>
+        </DialogContent>
+      );
+    }
+
     const steps = [
       {
         title: "Introduction",
@@ -341,16 +574,26 @@ export default function Tutorials() {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             ) : (
-              <Button
-                onClick={() => {
-                  markComplete(tutorial.id);
-                  setCurrentStep(0);
-                }}
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-              >
-                <Award className="h-4 w-4" />
-                Complete Tutorial
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowQuiz(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Brain className="h-4 w-4" />
+                  Take Quiz
+                </Button>
+                <Button
+                  onClick={() => {
+                    markComplete(tutorial.id);
+                    setCurrentStep(0);
+                  }}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <Award className="h-4 w-4" />
+                  Complete Tutorial
+                </Button>
+              </div>
             )}
           </div>
         </div>
