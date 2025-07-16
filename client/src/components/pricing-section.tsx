@@ -9,43 +9,44 @@ export default function PricingSection() {
       description: "Perfect for beginners and casual creators",
       price: 0,
       features: [
-        "5 AI-generated comics per month",
+        "10 free credits to start",
         "Basic art styles",
         "Standard resolution export",
-        "Community support"
+        "Community support",
+        "Social media preview generator"
       ],
       buttonText: "Get Started",
       buttonLink: "/register",
       popular: false
     },
     {
-      name: "Creator Pro",
-      description: "For serious hobbyists and creators",
-      price: 19,
+      name: "Basic",
+      description: "Great for regular creators",
+      price: 2.99,
       features: [
-        "Unlimited AI-generated comics",
+        "50 credits per month",
         "All art styles and templates",
         "High-resolution export",
         "Priority generation queue",
         "Email support"
       ],
-      buttonText: "Choose Pro",
-      buttonLink: "/register?plan=pro",
+      buttonText: "Choose Basic",
+      buttonLink: "/register?plan=basic",
       popular: true
     },
     {
-      name: "Enterprise",
-      description: "For professional studios and educators",
-      price: 49,
+      name: "Pro",
+      description: "For serious creators and small studios",
+      price: 7.99,
       features: [
-        "Everything in Pro",
-        "Team collaboration features",
+        "200 credits per month",
+        "Everything in Basic",
         "Commercial usage rights",
-        "NFT minting capabilities",
-        "Dedicated account manager"
+        "Advanced editing tools",
+        "Priority support"
       ],
-      buttonText: "Contact Sales",
-      buttonLink: "/contact",
+      buttonText: "Choose Pro",
+      buttonLink: "/register?plan=pro",
       popular: false
     }
   ];

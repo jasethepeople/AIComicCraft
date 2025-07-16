@@ -124,15 +124,15 @@ export async function initializeDatabase() {
           name: "Basic",
           tier: "basic",
           monthlyCredits: 50,
-          priceMonthly: 999, // $9.99
-          priceYearly: 9999, // $99.99 (2 months free)
+          priceMonthly: 299, // $2.99
+          priceYearly: 2999, // $29.99 (2 months free)
           priceLifetime: null,
           features: [
-            "50 AI generations per month",
-            "Advanced comic creation",
-            "Premium art styles",
-            "High-quality exports",
-            "Priority support"
+            "50 credits per month",
+            "All art styles",
+            "High-resolution exports",
+            "Priority generation queue",
+            "Email support"
           ],
           isActive: true
         },
@@ -140,17 +140,14 @@ export async function initializeDatabase() {
           name: "Pro",
           tier: "pro",
           monthlyCredits: 200,
-          priceMonthly: 2999, // $29.99
-          priceYearly: 29999, // $299.99 (2 months free)
+          priceMonthly: 799, // $7.99
+          priceYearly: 7999, // $79.99 (2 months free)
           priceLifetime: null,
           features: [
-            "200 AI generations per month",
-            "Unlimited comic projects",
-            "Anime creation studio",
-            "Commercial license",
+            "200 credits per month",
+            "Everything in Basic",
+            "Commercial usage rights",
             "Advanced editing tools",
-            "Custom art styles",
-            "API access",
             "Priority support"
           ],
           isActive: true
@@ -161,15 +158,14 @@ export async function initializeDatabase() {
           monthlyCredits: 999999, // Unlimited
           priceMonthly: null,
           priceYearly: null,
-          priceLifetime: 49999, // $499.99
+          priceLifetime: 9999, // $99.99
           features: [
-            "Unlimited AI generations",
+            "Unlimited credits",
             "All Pro features",
             "Lifetime access",
             "No monthly fees",
             "Exclusive content",
-            "Early access to new features",
-            "Direct contact with creators"
+            "Early access to new features"
           ],
           isActive: true
         }
