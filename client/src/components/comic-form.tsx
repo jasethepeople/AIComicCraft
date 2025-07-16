@@ -31,6 +31,7 @@ const comicFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   artStyle: z.string().min(1, "Art style is required"),
+  targetAudience: z.string().min(1, "Target audience is required"),
   prompt: z.string().min(10, "Please provide a detailed story prompt for better results"),
   panelCount: z.coerce.number().min(1).max(12).default(6),
 });
@@ -80,12 +81,14 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
       title: existingComic.title,
       description: existingComic.description || "",
       artStyle: existingComic.artStyle,
+      targetAudience: "All Ages",
       prompt: "", // We don't store the prompt in the comic model
       panelCount: 6,
     } : {
       title: "",
       description: "",
       artStyle: "Superhero",
+      targetAudience: "All Ages",
       prompt: "",
       panelCount: 6,
     },
@@ -303,6 +306,35 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
                 </Select>
                 <FormDescription>
                   Choose the visual style for your comic.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="targetAudience"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Target Audience</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select target audience" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="All Ages">All Ages</SelectItem>
+                    <SelectItem value="Children (6-12)">Children (6-12)</SelectItem>
+                    <SelectItem value="Teen (13-17)">Teen (13-17)</SelectItem>
+                    <SelectItem value="Young Adult (18-25)">Young Adult (18-25)</SelectItem>
+                    <SelectItem value="Adult (26+)">Adult (26+)</SelectItem>
+                    <SelectItem value="Mature (18+)">Mature (18+)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Choose the intended age group for your comic
                 </FormDescription>
                 <FormMessage />
               </FormItem>

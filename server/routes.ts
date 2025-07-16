@@ -1013,6 +1013,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return await storage.deductCredits(userId, requiredCredits, description, relatedId);
   };
 
+  // Generation endpoints
+  app.post("/api/generate/character", authenticate, async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      
+      if (!name || !description) {
+        return res.status(400).json({ message: "Name and description are required" });
+      }
+      
+      // For now, provide enhanced description without OpenAI
+      const enhancedDescription = `${description}. This character has distinct personality traits and plays an important role in the story. They have unique visual characteristics that make them memorable and contribute to the overall narrative.`;
+      
+      const characterDetails = {
+        name,
+        fullDescription: enhancedDescription,
+        personality: "Dynamic and engaging character with depth",
+        visualTraits: "Distinctive appearance that fits the comic style",
+        role: "Key character in the story"
+      };
+      
+      res.json(characterDetails);
+    } catch (error: any) {
+      console.error("Error generating character:", error);
+      res.status(500).json({ message: "Failed to generate character details" });
+    }
+  });
+
+  app.post("/api/generate/story", authenticate, async (req, res) => {
+    try {
+      const { title, description, artStyle, characters, panelCount, prompt } = req.body;
+      
+      if (!title || !prompt) {
+        return res.status(400).json({ message: "Title and prompt are required" });
+      }
+
+      // Deduct credits first (2 credits for story generation)
+      const creditDeducted = await storage.deductCredits(
+        req.session.userId!,
+        2,
+        "Comic story generation"
+      );
+      
+      if (!creditDeducted) {
+        return res.status(402).json({ 
+          message: "Insufficient credits", 
+          required: 2,
+          action: "story_generation"
+        });
+      }
+
+      // Create comic with panels
+      const comic = await storage.createComic({
+        title,
+        description: description || "",
+        userId: req.session.userId!,
+        artStyle,
+        contentType: "comic"
+      });
+
+      // Create basic panels
+      const panels = [];
+      for (let i = 1; i <= Math.min(panelCount || 6, 12); i++) {
+        const panel = await storage.createPanel({
+          comicId: comic.id,
+          sequence: i,
+          layout: "standard",
+          panelType: "static",
+          characters: characters || [],
+          dialogues: []
+        });
+        panels.push(panel);
+      }
+
+      res.json({ 
+        comicId: comic.id,
+        comic,
+        panels,
+        creditsUsed: 2
+      });
+    } catch (error: any) {
+      console.error("Error generating story:", error);
+      res.status(500).json({ message: "Failed to create comic. Please try again." });
+    }
+  });
+
+  app.post("/api/generate/panel", authenticate, async (req, res) => {
+    try {
+      const { description, layout, characters, dialogues } = req.body;
+      
+      if (!description) {
+        return res.status(400).json({ message: "Panel description is required" });
+      }
+      
+      // For now, return a placeholder image URL
+      const imageUrl = "https://via.placeholder.com/800x600/4f46e5/ffffff?text=Comic+Panel";
+      
+      res.json({ 
+        imageUrl,
+        description,
+        layout: layout || "standard"
+      });
+    } catch (error: any) {
+      console.error("Error generating panel:", error);
+      res.status(500).json({ message: "Failed to generate panel" });
+    }
+  });
+
   // Tutorial progress endpoints
   app.get("/api/tutorials/progress", authenticate, async (req, res) => {
     try {
