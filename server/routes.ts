@@ -62,6 +62,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userData = insertUserSchema.parse(req.body);
       
+      // Additional validation for empty/invalid fields
+      if (!userData.username || userData.username.trim().length === 0) {
+        return res.status(400).json({ message: "Username is required and cannot be empty" });
+      }
+      
+      if (!userData.email || !userData.email.includes("@") || userData.email.trim().length === 0) {
+        return res.status(400).json({ message: "Valid email address is required" });
+      }
+      
+      if (!userData.password || userData.password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+      
       // Check if user already exists
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
