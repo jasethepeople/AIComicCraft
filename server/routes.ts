@@ -8,7 +8,8 @@ import {
   comicGenerationSchema,
   panelGenerationSchema,
   animeGenerationSchema,
-  creditPurchaseSchema
+  creditPurchaseSchema,
+  styleRecommendationSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -204,6 +205,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const comic = await storage.createComic(comicData);
+      
+      // Record style usage for recommendations
+      await recordStyleUsage(req.session.userId!, comicData.artStyle);
+      
       res.status(201).json(comic);
     } catch (err) {
       if (err instanceof ZodError) {
@@ -841,6 +846,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to process webhook" });
     }
   });
+
+  // Style recommendation routes
+  app.post("/api/styles/recommend", authenticate, async (req, res) => {
+    try {
+      const recommendationRequest = styleRecommendationSchema.parse(req.body);
+      
+      // Get all available art styles
+      const availableStyles = await storage.getAllArtStyles();
+      
+      // Get user's style preferences/history
+      const userPreferences = await storage.getStyleUsageStats(req.session.userId!);
+      
+      // Generate AI-powered recommendations
+      const recommendations = await openai.generateStyleRecommendations(
+        recommendationRequest,
+        availableStyles,
+        userPreferences
+      );
+      
+      res.json({ recommendations });
+    } catch (err) {
+      if (err instanceof ZodError) {
+        const validationError = fromZodError(err);
+        return res.status(400).json({ message: validationError.message });
+      }
+      
+      console.error("Error generating style recommendations:", err);
+      res.status(500).json({ message: "Failed to generate style recommendations" });
+    }
+  });
+
+  // Get user's style preferences and usage stats
+  app.get("/api/styles/preferences", authenticate, async (req, res) => {
+    try {
+      const preferences = await storage.getUserStylePreferences(req.session.userId!);
+      const stats = await storage.getStyleUsageStats(req.session.userId!);
+      
+      res.json({ preferences, stats });
+    } catch (err) {
+      console.error("Error fetching style preferences:", err);
+      res.status(500).json({ message: "Failed to fetch style preferences" });
+    }
+  });
+
+  // Rate an art style
+  app.post("/api/styles/:styleId/rate", authenticate, async (req, res) => {
+    try {
+      const { rating } = req.body;
+      const styleId = parseInt(req.params.styleId);
+      
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      }
+      
+      const preference = await storage.rateArtStyle(req.session.userId!, styleId, rating);
+      
+      if (!preference) {
+        return res.status(404).json({ message: "Style preference not found" });
+      }
+      
+      res.json(preference);
+    } catch (err) {
+      console.error("Error rating art style:", err);
+      res.status(500).json({ message: "Failed to rate art style" });
+    }
+  });
+
+  // Helper function to record style usage for recommendations
+  const recordStyleUsage = async (userId: number, styleName: string): Promise<void> => {
+    try {
+      const allStyles = await storage.getAllArtStyles();
+      const style = allStyles.find(s => s.name.toLowerCase() === styleName.toLowerCase());
+      if (style) {
+        await storage.recordStyleUsage(userId, style.id);
+      }
+    } catch (error) {
+      console.error("Error recording style usage:", error);
+      // Don't throw - this is a non-critical feature
+    }
+  };
 
   // Check if user has enough credits and deduct them for generation
   const checkAndDeductCredits = async (userId: number, requiredCredits: number, description: string, relatedId?: number): Promise<boolean> => {

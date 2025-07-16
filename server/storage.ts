@@ -1,11 +1,12 @@
 import { 
-  users, comics, panels, artStyles, creditTransactions, subscriptionPlans,
+  users, comics, panels, artStyles, creditTransactions, subscriptionPlans, userStylePreferences,
   type User, type InsertUser, 
   type Comic, type InsertComic, 
   type Panel, type InsertPanel, 
   type ArtStyle, type InsertArtStyle,
   type CreditTransaction, type InsertCreditTransaction,
-  type SubscriptionPlan, type InsertSubscriptionPlan
+  type SubscriptionPlan, type InsertSubscriptionPlan,
+  type UserStylePreference, type InsertUserStylePreference
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -51,6 +52,12 @@ export interface IStorage {
   getAllSubscriptionPlans(): Promise<any[]>;
   getSubscriptionPlan(tier: string): Promise<any | undefined>;
   resetMonthlyCredits(userId: number): Promise<boolean>;
+  
+  // Style preference operations
+  getUserStylePreferences(userId: number): Promise<UserStylePreference[]>;
+  recordStyleUsage(userId: number, artStyleId: number): Promise<UserStylePreference>;
+  rateArtStyle(userId: number, artStyleId: number, rating: number): Promise<UserStylePreference | undefined>;
+  getStyleUsageStats(userId: number): Promise<Array<{ styleName: string; usageCount: number; rating?: number; artStyleId: number }>>;
 }
 
 // In-memory storage implementation
@@ -503,6 +510,82 @@ export class DatabaseStorage implements IStorage {
       console.error("Error resetting monthly credits:", error);
       return false;
     }
+  }
+  async getUserStylePreferences(userId: number): Promise<UserStylePreference[]> {
+    const preferences = await db
+      .select()
+      .from(userStylePreferences)
+      .where(eq(userStylePreferences.userId, userId))
+      .orderBy(desc(userStylePreferences.usageCount));
+    return preferences;
+  }
+
+  async recordStyleUsage(userId: number, artStyleId: number): Promise<UserStylePreference> {
+    // Check if preference already exists
+    const [existingPreference] = await db
+      .select()
+      .from(userStylePreferences)
+      .where(eq(userStylePreferences.userId, userId))
+      .where(eq(userStylePreferences.artStyleId, artStyleId));
+
+    if (existingPreference) {
+      // Update existing preference
+      const [updatedPreference] = await db
+        .update(userStylePreferences)
+        .set({
+          usageCount: existingPreference.usageCount + 1,
+          lastUsed: new Date(),
+        })
+        .where(eq(userStylePreferences.id, existingPreference.id))
+        .returning();
+      return updatedPreference;
+    } else {
+      // Create new preference
+      const [newPreference] = await db
+        .insert(userStylePreferences)
+        .values({
+          userId,
+          artStyleId,
+          usageCount: 1,
+        })
+        .returning();
+      return newPreference;
+    }
+  }
+
+  async rateArtStyle(userId: number, artStyleId: number, rating: number): Promise<UserStylePreference | undefined> {
+    const [existingPreference] = await db
+      .select()
+      .from(userStylePreferences)
+      .where(eq(userStylePreferences.userId, userId))
+      .where(eq(userStylePreferences.artStyleId, artStyleId));
+
+    if (existingPreference) {
+      const [updatedPreference] = await db
+        .update(userStylePreferences)
+        .set({ rating })
+        .where(eq(userStylePreferences.id, existingPreference.id))
+        .returning();
+      return updatedPreference;
+    }
+
+    return undefined;
+  }
+
+  async getStyleUsageStats(userId: number): Promise<Array<{ styleName: string; usageCount: number; rating?: number; artStyleId: number }>> {
+    const stats = await db
+      .select({
+        styleName: artStyles.name,
+        usageCount: userStylePreferences.usageCount,
+        rating: userStylePreferences.rating,
+        artStyleId: userStylePreferences.artStyleId,
+      })
+      .from(userStylePreferences)
+      .innerJoin(artStyles, eq(userStylePreferences.artStyleId, artStyles.id))
+      .where(eq(userStylePreferences.userId, userId))
+      .orderBy(desc(userStylePreferences.usageCount));
+      
+    return stats;
   }
 }
 

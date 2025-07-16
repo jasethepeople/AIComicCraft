@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { ComicGenerationRequest, PanelGenerationRequest, AnimeGenerationRequest } from "@shared/schema";
+import { ComicGenerationRequest, PanelGenerationRequest, AnimeGenerationRequest, StyleRecommendationRequest } from "@shared/schema";
 
 // Initialize OpenAI with API key from environment variables
 const openai = new OpenAI({ 
@@ -272,10 +272,83 @@ export async function generateAnimeFrame(
   }
 }
 
+/**
+ * Generate art style recommendations based on user input and preferences
+ */
+export async function generateStyleRecommendations(
+  request: StyleRecommendationRequest,
+  availableStyles: Array<{ id: number; name: string; description: string }>,
+  userPreferences?: Array<{ styleName: string; usageCount: number; rating?: number }>
+): Promise<Array<{ styleId: number; styleName: string; confidence: number; reasoning: string }>> {
+  try {
+    const systemPrompt = `You are an expert comic book and anime art style consultant. Based on the user's project details and preferences, recommend the most suitable art styles from the available options.
+
+Analyze:
+1. Content type and genre compatibility
+2. Target audience appropriateness  
+3. Mood and tone alignment
+4. Character types and story themes
+5. User's historical preferences and ratings
+
+Respond with JSON containing an array of recommendations, each with:
+- styleId: number (from available styles)
+- styleName: string
+- confidence: number (0-1, how confident you are in this recommendation)
+- reasoning: string (brief explanation why this style fits)
+
+Limit to top 3-5 most suitable recommendations, ordered by confidence.`;
+
+    const userPrompt = `Project Details:
+${request.title ? `Title: ${request.title}` : ''}
+${request.description ? `Description: ${request.description}` : ''}
+Content Type: ${request.contentType}
+${request.genre ? `Genre: ${request.genre}` : ''}
+${request.targetAudience ? `Target Audience: ${request.targetAudience}` : ''}
+${request.mood ? `Mood/Tone: ${request.mood}` : ''}
+${request.characters ? `Characters: ${request.characters.map(c => `${c.name} (${c.description})`).join(', ')}` : ''}
+
+Available Art Styles:
+${availableStyles.map(style => `ID ${style.id}: ${style.name} - ${style.description}`).join('\n')}
+
+${userPreferences && userPreferences.length > 0 ? 
+`User's Previous Style Usage:
+${userPreferences.map(pref => `${pref.styleName}: Used ${pref.usageCount} times${pref.rating ? `, Rated ${pref.rating}/5 stars` : ''}`).join('\n')}` : 
+'No previous style usage data available.'}
+
+Please recommend the most suitable art styles for this project.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{"recommendations": []}');
+    return result.recommendations || [];
+  } catch (error) {
+    console.error("Error generating style recommendations:", error);
+    // Fallback to basic recommendations based on content type
+    const fallbackRecommendations = availableStyles
+      .slice(0, 3)
+      .map(style => ({
+        styleId: style.id,
+        styleName: style.name,
+        confidence: 0.5,
+        reasoning: `Basic recommendation based on ${request.contentType} content type.`
+      }));
+    return fallbackRecommendations;
+  }
+}
+
 export default {
   generateComicPanel,
   generateStoryOutline,
   generateCharacterDetails,
   generateAnime,
-  generateAnimeFrame
+  generateAnimeFrame,
+  generateStyleRecommendations
 };

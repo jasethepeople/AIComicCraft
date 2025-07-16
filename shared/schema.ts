@@ -257,6 +257,44 @@ export const creditPurchaseSchema = z.object({
 
 export type CreditPurchaseRequest = z.infer<typeof creditPurchaseSchema>;
 
+// Style recommendation schema
+export const styleRecommendationSchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  contentType: z.enum(["comic", "anime", "manga"]).default("comic"),
+  genre: z.string().optional(),
+  targetAudience: z.enum(["children", "teens", "adults", "all"]).optional(),
+  mood: z.enum(["lighthearted", "serious", "dark", "adventure", "romance", "action", "comedy", "drama"]).optional(),
+  characters: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+  })).optional(),
+  previousStyles: z.array(z.string()).optional(), // User's previous art style preferences
+});
+
+export type StyleRecommendationRequest = z.infer<typeof styleRecommendationSchema>;
+
+// User style preferences tracking
+export const userStylePreferences = pgTable("user_style_preferences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  artStyleId: integer("art_style_id").notNull(),
+  usageCount: integer("usage_count").default(1).notNull(),
+  lastUsed: timestamp("last_used").defaultNow().notNull(),
+  rating: integer("rating"), // 1-5 stars, optional user rating
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertUserStylePreferenceSchema = createInsertSchema(userStylePreferences).pick({
+  userId: true,
+  artStyleId: true,
+  usageCount: true,
+  rating: true,
+});
+
+export type UserStylePreference = typeof userStylePreferences.$inferSelect;
+export type InsertUserStylePreference = z.infer<typeof insertUserStylePreferenceSchema>;
+
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({
   comics: many(comics),
@@ -282,5 +320,16 @@ export const creditTransactionsRelations = relations(creditTransactions, ({ one 
   user: one(users, {
     fields: [creditTransactions.userId],
     references: [users.id],
+  }),
+}));
+
+export const userStylePreferencesRelations = relations(userStylePreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userStylePreferences.userId],
+    references: [users.id],
+  }),
+  artStyle: one(artStyles, {
+    fields: [userStylePreferences.artStyleId],
+    references: [artStyles.id],
   }),
 }));

@@ -5,6 +5,7 @@ import { Helmet } from "react-helmet";
 import { Comic } from "@shared/schema";
 import ComicEditor from "@/components/editor/comic-editor";
 import ComicForm from "@/components/comic-form";
+import StyleRecommendation from "@/components/style-recommendation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +14,7 @@ export default function CreatorStudio() {
   const { id } = useParams<{ id: string }>();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<string>("editor");
+  const [activeTab, setActiveTab] = useState<string>("recommendations");
 
   // If ID is provided, fetch the comic data
   const { data: comic, isLoading, isError } = useQuery<Comic>({
@@ -91,7 +92,28 @@ export default function CreatorStudio() {
           </Tabs>
         ) : (
           // Create new comic
-          <ComicForm />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="recommendations">AI Style Assistant</TabsTrigger>
+              <TabsTrigger value="form">Create Comic</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="recommendations" className="mt-6">
+              <StyleRecommendation 
+                onStyleSelect={(styleId, styleName) => {
+                  setActiveTab("form");
+                  toast({
+                    title: "Style Selected",
+                    description: `Selected ${styleName} for your project. Switch to the Create Comic tab to continue.`,
+                  });
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="form" className="mt-6">
+              <ComicForm />
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </div>
