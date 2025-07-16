@@ -69,16 +69,14 @@ export default function ArtStylesSection() {
           ))}
           
           {/* Custom Style */}
-          <Link href="/creator-studio">
-            <a className="comic-panel bg-white rounded-lg overflow-hidden border-2 border-dashed border-primary flex flex-col items-center justify-center h-full cursor-pointer hover:bg-primary/5 transition-colors">
-              <div className="p-6 text-center">
-                <div className="w-16 h-16 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Link href="/creator-studio" className="comic-panel bg-white rounded-lg overflow-hidden border-2 border-dashed border-primary flex flex-col items-center justify-center h-full cursor-pointer hover:bg-primary/5 transition-colors">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Plus className="text-3xl text-primary" />
                 </div>
                 <h3 className="font-comic font-bold text-dark mb-1">Custom Style</h3>
                 <p className="text-gray-600 text-sm">Create your own unique look</p>
               </div>
-            </a>
           </Link>
         </div>
       </div>

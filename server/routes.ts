@@ -350,8 +350,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Generate story outline using OpenAI
-      const storyOutline = await openai.generateStoryOutline(generationRequest);
+      let storyOutline;
+      try {
+        // Try to generate story outline using OpenAI
+        storyOutline = await openai.generateStoryOutline(generationRequest);
+      } catch (openaiError) {
+        // Fallback when OpenAI is not available
+        console.log("OpenAI API not available, using fallback story generation");
+        storyOutline = {
+          outline: `${generationRequest.title}: ${generationRequest.prompt}. This exciting story unfolds across ${generationRequest.panelCount} action-packed panels.`,
+          scenes: Array.from({ length: generationRequest.panelCount }, (_, i) => ({
+            description: `Panel ${i + 1}: ${generationRequest.prompt} - Scene ${i + 1}`,
+            dialogues: generationRequest.characters.map(char => ({
+              character: char.name,
+              text: `${char.name} takes action in this exciting scene!`
+            }))
+          }))
+        };
+      }
       
       // Create a new comic
       const comic = await storage.createComic({
