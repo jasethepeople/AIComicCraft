@@ -63,6 +63,7 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
     refetchOnWindowFocus: true,
     staleTime: 0,
     refetchOnMount: true,
+    refetchInterval: 5000, // Refetch every 5 seconds to catch auth changes
   });
 
   // Fetch credit balance for authenticated users

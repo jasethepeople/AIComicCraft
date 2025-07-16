@@ -31,7 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const MemoryStoreSession = MemoryStore(session);
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || "comic-ai-secret",
+      secret: process.env.SESSION_SECRET || "comic-ai-secret-key-for-session-management",
       resave: false,
       saveUninitialized: false,
       store: new MemoryStoreSession({
@@ -39,7 +39,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }),
       cookie: {
         maxAge: 24 * 60 * 60 * 1000, // 1 day
-        secure: process.env.NODE_ENV === "production",
+        secure: false, // Set to false for development, will be true in production
+        httpOnly: true,
+        sameSite: 'lax'
       },
     })
   );
@@ -129,12 +131,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       
-      // Set session
+      // Set session and save it
       req.session.userId = user.id;
-      
-      // Return user without password
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        
+        // Return user without password
+        const { password: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
     } catch (err) {
       res.status(500).json({ message: "Failed to log in" });
     }
