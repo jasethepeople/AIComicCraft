@@ -16,6 +16,9 @@ import Login from "@/pages/login";
 import Community from "@/pages/community";
 import Learn from "@/pages/learn";
 import Credits from "@/pages/credits";
+import Onboarding from "@/pages/onboarding";
+import SocialPreview from "@/pages/social-preview";
+import OnboardingChecker from "@/components/onboarding-checker";
 
 function Router() {
   return (
@@ -31,6 +34,8 @@ function Router() {
       <Route path="/community" component={Community} />
       <Route path="/learn" component={Learn} />
       <Route path="/credits" component={Credits} />
+      <Route path="/onboarding" component={Onboarding} />
+      <Route path="/social-preview" component={SocialPreview} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -40,6 +45,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <OnboardingChecker />
         <Header />
         <main className="min-h-screen">
           <Router />

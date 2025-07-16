@@ -77,6 +77,7 @@ export default function Header() {
           <NavLink href="/creator-studio">Comics</NavLink>
           <NavLink href="/anime-studio">Anime</NavLink>
           <NavLink href="/marketplace">Marketplace</NavLink>
+          <NavLink href="/social-preview">Social</NavLink>
           <NavLink href="/community">Community</NavLink>
           <NavLink href="/learn">Learn</NavLink>
         </nav>
@@ -171,6 +172,9 @@ export default function Header() {
             </Link>
             <Link href="/marketplace">
               <a className="text-white hover:text-secondary transition-colors">Marketplace</a>
+            </Link>
+            <Link href="/social-preview">
+              <a className="text-white hover:text-secondary transition-colors">Social</a>
             </Link>
             <Link href="/community">
               <a className="text-white hover:text-secondary transition-colors">Community</a>
