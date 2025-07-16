@@ -55,10 +55,17 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
     queryKey: ["/api/art-styles"],
   });
 
+  // Check authentication status
+  const { data: authUser } = useQuery({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+  });
+
   // Fetch credit balance for authenticated users
   const { data: creditBalance } = useQuery({
     queryKey: ["/api/credits/balance"],
-    onError: () => null
+    enabled: !!authUser,
+    retry: false,
   });
   
   // Initialize form with existing comic data or defaults
@@ -93,6 +100,17 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
 
   // Handle form submission
   const onSubmit = async (data: ComicFormValues) => {
+    // Check if user is authenticated
+    if (!authUser) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to create comics.",
+        variant: "destructive",
+      });
+      setLocation("/login");
+      return;
+    }
+
     if (characters.length === 0) {
       toast({
         title: "Add characters",
@@ -145,6 +163,17 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
     } catch (error: any) {
       console.error("Error creating/updating comic:", error);
       
+      // Handle authentication error
+      if (error.message?.includes("status: 401") || error.message?.includes("Unauthorized")) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to create comics.",
+          variant: "destructive",
+        });
+        setLocation("/login");
+        return;
+      }
+      
       // Handle insufficient credits error
       if (error.message?.includes("status: 402") || error.message?.includes("Insufficient credits")) {
         try {
@@ -165,9 +194,13 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
           setShowInsufficientCredits(true);
         }
       } else {
+        // More detailed error messaging
+        const errorMessage = error.message || "Failed to create comic. Please try again.";
+        console.log("Full error details:", error);
+        
         toast({
           title: "Error",
-          description: "Failed to create comic. Please try again.",
+          description: errorMessage,
           variant: "destructive",
         });
       }
@@ -175,6 +208,22 @@ export default function ComicForm({ existingComic }: ComicFormProps) {
       setIsGenerating(false);
     }
   };
+
+  // Show login prompt if user is not authenticated
+  if (!authUser) {
+    return (
+      <div className="bg-white rounded-xl p-6 shadow-md text-center">
+        <h3 className="text-xl font-semibold mb-4">Login Required</h3>
+        <p className="text-gray-600 mb-6">Please log in to create comics and access all features.</p>
+        <Button 
+          onClick={() => setLocation("/login")}
+          className="bg-primary hover:bg-opacity-90"
+        >
+          Log In to Create Comics
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl p-6 shadow-md">
