@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "wouter";
+import { getQueryFn } from "@/lib/queryClient";
 import { 
   User as UserIcon, 
   Mail, 
@@ -20,13 +21,13 @@ import {
 export default function Profile() {
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
-    onError: () => null
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const { data: creditBalance } = useQuery({
     queryKey: ["/api/credits/balance"],
     enabled: !!user,
-    onError: () => null
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   if (isLoading) {

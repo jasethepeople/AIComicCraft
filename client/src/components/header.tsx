@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { User } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
 import { Menu, X, UserCircle, LogOut, Settings, Zap, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -24,14 +24,14 @@ export default function Header() {
 
   const { data: user } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
-    onError: () => null
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   // Fetch credit balance for authenticated users
   const { data: creditBalance } = useQuery({
     queryKey: ["/api/credits/balance"],
     enabled: !!user,
-    onError: () => null
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const handleLogout = async () => {

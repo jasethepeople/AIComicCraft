@@ -2,13 +2,14 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@shared/schema";
+import { getQueryFn } from "@/lib/queryClient";
 
 export default function OnboardingChecker() {
   const [, setLocation] = useLocation();
 
   const { data: user } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
-    onError: () => null
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   useEffect(() => {

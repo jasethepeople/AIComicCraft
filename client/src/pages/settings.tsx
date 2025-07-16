@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { Link } from "wouter";
 import { 
   User as UserIcon, 
@@ -29,7 +29,7 @@ export default function Settings() {
 
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
-    onError: () => null
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   // Settings state

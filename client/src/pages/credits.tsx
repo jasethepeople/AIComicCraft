@@ -173,7 +173,8 @@ export default function Credits() {
       setCreditClientSecret(data.clientSecret);
       setShowCreditPurchase(true);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Credit purchase error:", error);
       toast({
         title: "Error",
         description: "Failed to initiate credit purchase",
@@ -192,7 +193,8 @@ export default function Credits() {
       setSubscriptionClientSecret(data.clientSecret);
       setShowSubscriptionUpgrade(true);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Subscription purchase error:", error);
       toast({
         title: "Error",
         description: "Failed to initiate subscription purchase",

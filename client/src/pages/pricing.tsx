@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { Check, Zap, Crown, Star, Infinity } from "lucide-react";
+import { getQueryFn } from "@/lib/queryClient";
 
 export default function Pricing() {
   const { data: subscriptionPlans = [] } = useQuery({
@@ -12,7 +13,7 @@ export default function Pricing() {
 
   const { data: user } = useQuery({
     queryKey: ["/api/auth/me"],
-    onError: () => null,
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const formatPrice = (cents: number | null) => {

@@ -174,6 +174,7 @@ export default function AnimeStudio() {
       queryClient.invalidateQueries({ queryKey: ["/api/comics/user/me"] });
     },
     onError: (error: any) => {
+      console.error("Anime generation error:", error);
       toast({
         title: "Generation Failed",
         description: error.message || "Failed to generate anime. Please try again.",
