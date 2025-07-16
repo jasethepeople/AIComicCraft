@@ -108,4 +108,13 @@
   .tool-button:hover {
     transform: translateY(-2px);
   }
+
+  /* Custom utility classes */
+  .text-dark {
+    @apply text-gray-900 dark:text-white;
+  }
+  
+  .bg-dark {
+    @apply bg-gray-900 dark:bg-gray-800;
+  }
 }
