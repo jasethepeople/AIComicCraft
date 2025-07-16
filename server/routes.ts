@@ -1016,7 +1016,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tutorial progress endpoints
   app.get("/api/tutorials/progress", authenticate, async (req, res) => {
     try {
-      const progress = await storage.getUserTutorialProgress(req.user!.id);
+      const userId = req.session.userId!;
+      const progress = await storage.getUserTutorialProgress(userId);
       res.json(progress);
     } catch (error: any) {
       console.error("Error fetching tutorial progress:", error);
@@ -1027,26 +1028,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tutorials/complete", authenticate, async (req, res) => {
     try {
       const { tutorialId, quizScore } = req.body;
-      const progress = await storage.markTutorialComplete(req.user!.id, tutorialId, quizScore);
+      const userId = req.session.userId!;
+      const progress = await storage.markTutorialComplete(userId, tutorialId, quizScore);
       
       // Check for achievements
-      const allProgress = await storage.getUserTutorialProgress(req.user!.id);
+      const allProgress = await storage.getUserTutorialProgress(userId);
       const completedCount = allProgress.length;
       
       // Award achievements based on completion count
       if (completedCount === 1) {
-        await storage.unlockTutorialAchievement(req.user!.id, "first_tutorial");
+        await storage.unlockTutorialAchievement(userId, "first_tutorial");
       } else if (completedCount === 3) {
-        await storage.unlockTutorialAchievement(req.user!.id, "intermediate_learner");
+        await storage.unlockTutorialAchievement(userId, "intermediate_learner");
       } else if (completedCount === 6) {
-        await storage.unlockTutorialAchievement(req.user!.id, "advanced_student");
+        await storage.unlockTutorialAchievement(userId, "advanced_student");
       } else if (completedCount === 8) {
-        await storage.unlockTutorialAchievement(req.user!.id, "master_artist");
+        await storage.unlockTutorialAchievement(userId, "master_artist");
       }
       
       // Award quiz performance achievements
       if (quizScore === 3) {
-        await storage.unlockTutorialAchievement(req.user!.id, "perfect_score");
+        await storage.unlockTutorialAchievement(userId, "perfect_score");
       }
       
       res.json(progress);
@@ -1058,7 +1060,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/tutorials/achievements", authenticate, async (req, res) => {
     try {
-      const achievements = await storage.getUserTutorialAchievements(req.user!.id);
+      const userId = req.session.userId!;
+      const achievements = await storage.getUserTutorialAchievements(userId);
       res.json(achievements);
     } catch (error: any) {
       console.error("Error fetching achievements:", error);

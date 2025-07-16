@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { CheckCircle, XCircle, Brain } from "lucide-react";
 import { motion } from "framer-motion";
-import { CheckCircle, X, HelpCircle, Trophy } from "lucide-react";
 
 interface QuizQuestion {
   id: string;
   question: string;
   options: string[];
   correctAnswer: number;
-  explanation: string;
+  explanation?: string;
 }
 
 interface TutorialQuizProps {
@@ -20,245 +21,286 @@ interface TutorialQuizProps {
   onComplete: (score: number) => void;
 }
 
-const quizData: Record<string, QuizQuestion[]> = {
+// Quiz questions for different art styles
+const quizQuestions: Record<string, QuizQuestion[]> = {
   superhero: [
     {
-      id: "sh1",
-      question: "What are the primary colors most commonly used in superhero comics?",
-      options: ["Red, Blue, Yellow", "Green, Purple, Orange", "Black, White, Gray", "Pink, Turquoise, Brown"],
-      correctAnswer: 0,
-      explanation: "Red, blue, and yellow are the classic primary colors that create bold, heroic imagery in superhero comics."
+      id: "1",
+      question: "What is a key characteristic of superhero comic art?",
+      options: [
+        "Muted, realistic colors",
+        "Bold, dynamic poses and vibrant colors",
+        "Minimal detail and simple lines",
+        "Abstract, non-representational forms"
+      ],
+      correctAnswer: 1,
+      explanation: "Superhero comics feature bold, dynamic poses and vibrant colors to convey power and action."
     },
     {
-      id: "sh2",
-      question: "Which technique is essential for creating dynamic superhero poses?",
-      options: ["Static positioning", "Exaggerated anatomy", "Minimal backgrounds", "Soft lighting"],
+      id: "2", 
+      question: "Which perspective technique is commonly used in superhero comics?",
+      options: [
+        "Flat, front-facing views only",
+        "Dramatic angles and foreshortening",
+        "Bird's eye view exclusively", 
+        "Close-ups only"
+      ],
       correctAnswer: 1,
-      explanation: "Exaggerated anatomy helps convey power and heroism, making characters appear larger than life."
+      explanation: "Dramatic angles and foreshortening create dynamic, powerful compositions typical of superhero comics."
     },
     {
-      id: "sh3",
-      question: "What type of panel layouts work best for superhero action sequences?",
-      options: ["Square panels only", "Dramatic angles and varied sizes", "Text-heavy layouts", "Circular panels"],
+      id: "3",
+      question: "What type of anatomy is typical in superhero art?",
+      options: [
+        "Realistic proportions",
+        "Stylized, heroic proportions",
+        "Simplified stick figures",
+        "Abstract geometric shapes"
+      ],
       correctAnswer: 1,
-      explanation: "Dramatic angles and varied panel sizes create visual excitement and enhance the action flow."
+      explanation: "Superhero art uses stylized, heroic proportions to emphasize strength and idealized physiques."
     }
   ],
   manga: [
     {
-      id: "mg1",
-      question: "What is the most distinctive feature of manga character design?",
-      options: ["Small eyes", "Large, expressive eyes", "No facial features", "Square heads"],
+      id: "1",
+      question: "What is characteristic of manga character eyes?",
+      options: [
+        "Small and realistic",
+        "Large and expressive",
+        "Always closed",
+        "Geometric shapes"
+      ],
       correctAnswer: 1,
-      explanation: "Large, expressive eyes are a hallmark of manga style, conveying emotion and personality."
+      explanation: "Manga characters typically have large, expressive eyes that convey emotion effectively."
     },
     {
-      id: "mg2",
-      question: "What are screen tones used for in manga?",
-      options: ["Adding color", "Shading and texture", "Writing text", "Drawing panels"],
+      id: "2",
+      question: "Which technique is common in manga backgrounds?",
+      options: [
+        "Photorealistic detail",
+        "Speed lines and tone effects",
+        "Solid colors only",
+        "No backgrounds"
+      ],
       correctAnswer: 1,
-      explanation: "Screen tones create depth, atmosphere, and texture in black and white manga artwork."
+      explanation: "Manga uses speed lines, screen tones, and other effects to create mood and movement."
     },
     {
-      id: "mg3",
-      question: "How do manga panels typically differ from Western comics?",
-      options: ["Always the same size", "More varied and creative layouts", "Only circular shapes", "No panel borders"],
+      id: "3",
+      question: "What emotion technique is signature to manga?",
+      options: [
+        "Realistic facial expressions only",
+        "Exaggerated expressions and emotion symbols",
+        "No emotional expressions",
+        "Only subtle hints"
+      ],
       correctAnswer: 1,
-      explanation: "Manga often features more experimental and varied panel layouts to enhance storytelling flow."
+      explanation: "Manga uses highly exaggerated expressions and visual symbols (sweat drops, etc.) to show emotions."
     }
   ],
-  noir: [
+  // Default questions for other styles
+  default: [
     {
-      id: "nr1",
-      question: "What lighting technique is essential in noir comics?",
-      options: ["Bright, even lighting", "High contrast shadows", "Colorful lighting", "No shadows"],
-      correctAnswer: 1,
-      explanation: "High contrast lighting with dramatic shadows creates the moody, atmospheric feel of noir."
+      id: "1",
+      question: "What makes this art style unique?",
+      options: [
+        "Its color palette",
+        "Its line work",
+        "Its composition techniques",
+        "All of the above"
+      ],
+      correctAnswer: 3,
+      explanation: "Each art style combines multiple elements like color, lines, and composition to create its unique look."
     },
     {
-      id: "nr2",
-      question: "What color palette is most characteristic of noir style?",
-      options: ["Bright colors", "Pastels", "High contrast black and white", "Rainbow colors"],
-      correctAnswer: 2,
-      explanation: "High contrast black and white, often with limited color accents, defines the noir aesthetic."
+      id: "2",
+      question: "When applying this style, what should you focus on?",
+      options: [
+        "Only the technical aspects",
+        "Understanding the emotional impact",
+        "Copying exactly without variation",
+        "Ignoring the historical context"
+      ],
+      correctAnswer: 1,
+      explanation: "Understanding the emotional impact helps you apply the style effectively in your own work."
     },
     {
-      id: "nr3",
-      question: "What type of environments are typical in noir comics?",
-      options: ["Sunny beaches", "Urban, gritty settings", "Fantasy kingdoms", "Space stations"],
-      correctAnswer: 1,
-      explanation: "Urban, gritty environments with dark alleys and city streets are classic noir settings."
+      id: "3",
+      question: "How can you improve in this art style?",
+      options: [
+        "Practice and study examples",
+        "Ignore fundamentals",
+        "Only use digital tools",
+        "Avoid experimentation"
+      ],
+      correctAnswer: 0,
+      explanation: "Regular practice and studying examples from the style helps build mastery over time."
     }
   ]
 };
 
 export default function TutorialQuiz({ styleId, styleName, onComplete }: TutorialQuizProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
 
-  const questions = quizData[styleId] || [];
-  const currentQ = questions[currentQuestion];
-
-  if (!currentQ) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <HelpCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">Quiz not available for this style yet.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const handleAnswerSelect = (answerIndex: number) => {
-    setSelectedAnswer(answerIndex);
-  };
-
-  const handleSubmitAnswer = () => {
-    if (selectedAnswer === null) return;
-    
-    setShowExplanation(true);
-    if (selectedAnswer === currentQ.correctAnswer) {
-      setScore(score + 1);
-    }
+  // Get questions for this style, fallback to default
+  const questions = quizQuestions[styleId.toLowerCase()] || quizQuestions.default;
+  
+  const handleAnswerSelect = (questionId: string, answerIndex: string) => {
+    setSelectedAnswers(prev => ({
+      ...prev,
+      [questionId]: answerIndex
+    }));
   };
 
   const handleNext = () => {
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
-      setSelectedAnswer(null);
-      setShowExplanation(false);
     } else {
-      setIsComplete(true);
-      onComplete(score + (selectedAnswer === currentQ.correctAnswer ? 1 : 0));
+      // Calculate score and show results
+      let correctAnswers = 0;
+      questions.forEach(question => {
+        const selectedAnswer = selectedAnswers[question.id];
+        if (selectedAnswer && parseInt(selectedAnswer) === question.correctAnswer) {
+          correctAnswers++;
+        }
+      });
+      setScore(correctAnswers);
+      setShowResults(true);
     }
   };
 
-  if (isComplete) {
-    const finalScore = score + (selectedAnswer === currentQ.correctAnswer ? 1 : 0);
-    const percentage = Math.round((finalScore / questions.length) * 100);
-    
+  const handleFinish = () => {
+    onComplete(score);
+  };
+
+  const currentQ = questions[currentQuestion];
+  const isAnswered = selectedAnswers[currentQ.id] !== undefined;
+  const progress = ((currentQuestion + 1) / questions.length) * 100;
+
+  if (showResults) {
     return (
-      <Card>
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2">
-            <Trophy className="h-6 w-6 text-yellow-500" />
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5" />
             Quiz Complete!
           </CardTitle>
-          <CardDescription>
-            Your mastery of {styleName} style
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="text-center">
-            <div className="text-4xl font-bold mb-2">{percentage}%</div>
+            <div className="text-4xl font-bold mb-2">
+              {score}/{questions.length}
+            </div>
             <p className="text-muted-foreground">
-              {finalScore} out of {questions.length} correct
+              {score === questions.length ? "Perfect score!" : 
+               score >= questions.length * 0.7 ? "Great job!" :
+               "Keep practicing to improve!"}
             </p>
           </div>
-          
-          <Progress value={percentage} className="w-full" />
-          
-          <div className="text-center">
-            <Badge variant={percentage >= 80 ? "default" : percentage >= 60 ? "secondary" : "destructive"}>
-              {percentage >= 80 ? "Excellent!" : percentage >= 60 ? "Good job!" : "Keep learning!"}
-            </Badge>
+
+          {/* Results breakdown */}
+          <div className="space-y-4">
+            {questions.map((question, index) => {
+              const selectedAnswer = selectedAnswers[question.id];
+              const isCorrect = selectedAnswer && parseInt(selectedAnswer) === question.correctAnswer;
+              
+              return (
+                <motion.div
+                  key={question.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`p-4 rounded-lg border ${
+                    isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    {isCorrect ? (
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                    )}
+                    <div>
+                      <p className="font-medium mb-1">{question.question}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Your answer: {question.options[parseInt(selectedAnswer || "0")]}
+                      </p>
+                      {!isCorrect && (
+                        <p className="text-sm text-green-700 mt-1">
+                          Correct: {question.options[question.correctAnswer]}
+                        </p>
+                      )}
+                      {question.explanation && (
+                        <p className="text-sm text-blue-700 mt-2">
+                          💡 {question.explanation}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
-          
-          {percentage < 80 && (
-            <p className="text-sm text-muted-foreground text-center">
-              Review the tutorial again to improve your understanding!
-            </p>
-          )}
+
+          <Button onClick={handleFinish} className="w-full">
+            {score >= questions.length * 0.7 ? "Claim Certificate" : "Complete Quiz"}
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
+    <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center gap-2">
-            <HelpCircle className="h-5 w-5" />
-            {styleName} Style Quiz
-          </CardTitle>
-          <Badge variant="outline">
-            {currentQuestion + 1} / {questions.length}
-          </Badge>
-        </div>
-        <Progress value={((currentQuestion + 1) / questions.length) * 100} className="w-full" />
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <Brain className="h-5 w-5" />
+            {styleName} Quiz
+          </span>
+          <span className="text-sm font-normal">
+            {currentQuestion + 1} of {questions.length}
+          </span>
+        </CardTitle>
+        <Progress value={progress} className="w-full" />
       </CardHeader>
-      
       <CardContent className="space-y-6">
         <div>
-          <h3 className="text-lg font-semibold mb-4">{currentQ.question}</h3>
+          <h3 className="text-lg font-medium mb-4">{currentQ.question}</h3>
           
-          <div className="space-y-3">
-            {currentQ.options.map((option, index) => (
-              <motion.button
-                key={index}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleAnswerSelect(index)}
-                disabled={showExplanation}
-                className={`w-full p-4 text-left border rounded-lg transition-colors ${
-                  selectedAnswer === index
-                    ? showExplanation
-                      ? index === currentQ.correctAnswer
-                        ? "border-green-500 bg-green-50 dark:bg-green-950/20"
-                        : "border-red-500 bg-red-50 dark:bg-red-950/20"
-                      : "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
-                    : showExplanation && index === currentQ.correctAnswer
-                    ? "border-green-500 bg-green-50 dark:bg-green-950/20"
-                    : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span>{option}</span>
-                  {showExplanation && index === currentQ.correctAnswer && (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  )}
-                  {showExplanation && selectedAnswer === index && index !== currentQ.correctAnswer && (
-                    <X className="h-5 w-5 text-red-600" />
-                  )}
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-        
-        {showExplanation && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800"
+          <RadioGroup
+            value={selectedAnswers[currentQ.id] || ""}
+            onValueChange={(value) => handleAnswerSelect(currentQ.id, value)}
           >
-            <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-2">Explanation:</h4>
-            <p className="text-blue-700 dark:text-blue-300">{currentQ.explanation}</p>
-          </motion.div>
-        )}
-        
+            {currentQ.options.map((option, index) => (
+              <div key={index} className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-gray-50">
+                <RadioGroupItem value={index.toString()} id={`option-${index}`} />
+                <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
+                  {option}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
         <div className="flex justify-between">
-          <div className="text-sm text-muted-foreground">
-            Score: {score} / {currentQuestion + (showExplanation ? 1 : 0)}
-          </div>
-          
-          {!showExplanation ? (
-            <Button 
-              onClick={handleSubmitAnswer}
-              disabled={selectedAnswer === null}
-            >
-              Submit Answer
-            </Button>
-          ) : (
-            <Button onClick={handleNext}>
-              {currentQuestion < questions.length - 1 ? "Next Question" : "Finish Quiz"}
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            onClick={() => setCurrentQuestion(currentQuestion - 1)}
+            disabled={currentQuestion === 0}
+          >
+            Previous
+          </Button>
+          <Button
+            onClick={handleNext}
+            disabled={!isAnswered}
+          >
+            {currentQuestion === questions.length - 1 ? "Finish Quiz" : "Next"}
+          </Button>
         </div>
       </CardContent>
     </Card>
