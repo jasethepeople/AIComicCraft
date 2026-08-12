@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "YbbYKVm4mrJ1CueN_dIif"
+uri = "file://project-source.zip"
+type = "unspecified"
+title = "Project source code"
+description = "ZIP archive containing the project client, server, shared source, assets, and configuration files. Dependencies, build/cache folders, and cookie/session files were excluded."
