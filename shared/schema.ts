@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, json, timestamp, boolean, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, json, jsonb, timestamp, boolean, decimal } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -314,6 +314,24 @@ export const styleTrends = pgTable("style_trends", {
   periodEnd: timestamp("period_end").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// SRF pipeline history. The JSON documents are immutable snapshots of the
+// deterministic security calculation, so reports can be reconstructed later
+// without depending on the current inventory or algorithm implementation.
+export const srfPipelineRuns = pgTable("srf_pipeline_runs", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  clientId: text("client_id").notNull(),
+  inputSnapshot: jsonb("input_snapshot").notNull(),
+  correlationVersion: text("correlation_version").notNull(),
+  riskAlgorithmVersion: text("risk_algorithm_version").notNull(),
+  exposures: jsonb("exposures").notNull(),
+  summary: jsonb("summary").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type SrfPipelineRun = typeof srfPipelineRuns.$inferSelect;
+export type InsertSrfPipelineRun = typeof srfPipelineRuns.$inferInsert;
 
 export const insertUserStylePreferenceSchema = createInsertSchema(userStylePreferences).pick({
   userId: true,

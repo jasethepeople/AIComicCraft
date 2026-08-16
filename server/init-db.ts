@@ -1,10 +1,13 @@
 import { db } from "./db";
 import { artStyles, subscriptionPlans, type InsertArtStyle, type InsertSubscriptionPlan } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { ensureSrfStorage } from "./srf/repository";
 
 // Initialize database with art styles and subscription plans if they don't exist
 export async function initializeDatabase() {
   try {
+    await ensureSrfStorage();
+
     // Check if art styles already exist
     const existingStyles = await db.select().from(artStyles).limit(1);
     const existingPlans = await db.select().from(subscriptionPlans).limit(1);

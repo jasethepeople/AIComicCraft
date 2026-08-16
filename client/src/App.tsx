@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -33,6 +33,7 @@ import Documentation from "@/pages/documentation";
 import Careers from "@/pages/careers";
 import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
+import SrfDashboard from "@/pages/srf-dashboard";
 import OnboardingChecker from "@/components/onboarding-checker";
 
 interface ErrorBoundaryProps {
@@ -112,22 +113,26 @@ function Router() {
       <Route path="/careers" component={Careers} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
+      <Route path="/srf" component={SrfDashboard} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function App() {
+  const [location] = useLocation();
+  const isSrfRoute = location.startsWith("/srf");
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <OnboardingChecker />
-          <Header />
+          {!isSrfRoute && <OnboardingChecker />}
+          {!isSrfRoute && <Header />}
         <main className="min-h-screen">
           <Router />
         </main>
-        <Footer />
+        {!isSrfRoute && <Footer />}
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

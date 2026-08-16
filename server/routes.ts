@@ -19,6 +19,7 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import Stripe from "stripe";
 import crypto from "crypto";
+import { registerSrfRoutes } from "./srf/routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Stripe
@@ -60,6 +61,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/health", (_, res) => {
     res.json({ status: "ok" });
   });
+
+  registerSrfRoutes(app);
 
   // User routes
   app.post("/api/auth/register", async (req, res) => {
