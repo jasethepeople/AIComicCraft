@@ -5,5 +5,5 @@ generated = []
 id = "YbbYKVm4mrJ1CueN_dIif"
 uri = "file://project-source.zip"
 type = "unspecified"
-title = "Project source code"
-description = "ZIP archive containing the project client, server, shared source, assets, and configuration files. Dependencies, build/cache folders, and cookie/session files were excluded."
+title = "Complete project source ZIP"
+description = "Current project source, SRF implementation, dependency manifest, and lockfile. Generated dependencies, build output, and environment-secret files are excluded."
